@@ -27,10 +27,18 @@ No sign-up, no server, no ads. Everything stays on your phone.
 - **Average consumption** (km/L or L/100 km).
 - **BUDI95 quota bar**: litres used out of your monthly quota (shared across all your vehicles) and roughly how much the subsidy saved you.
 - **Dashboard-style fuel gauge** with an estimate of **km left** and **when your next fill-up is due**. A warning appears under 60 km. Tap **Update** to enter the range (and odometer) your dashboard shows right now, and the estimate follows your car.
-- An overview for *Month / 3 months / Year / All*: spent, litres, cost per km, best and worst km/L.
+- **Coming up**: service reminders that are due within 1,000 km or 30 days, with a **Done** button. The card only appears when something is due.
+- An overview for *Month / 3 months / Year / All*: fuel spent, litres, fuel cost per km, best and worst km/L, and, once you log car costs, **car costs** and **all-in cost per km**.
+- **Share report**: turns the period you picked into an image (fuel, each type of car cost, distance, consumption, cost per km, BUDI95 saved, a per-month chart) to send on WhatsApp or keep.
 - One chart with tabs: **Spending** per month, **Price per litre** trend, **km/L** per fill-up.
 
+**Car costs and service reminders**
+- Log **service, tyres, repair, insurance, road tax, toll, parking** and other costs from **+ Car cost** on Home or the **Car costs** tab in History.
+- **Service reminders** per vehicle (Settings): every so many km and/or months, whichever comes first. Quick picks for oil change, road tax, insurance, tyre rotation, battery and brake check. The current odometer is estimated from your fill-ups and how much you usually drive.
+- Logging a cost can tick off a reminder (e.g. a Service cost marks the oil change done).
+
 **History**
+- Two tabs: **Fuel** and **Car costs**.
 - Grouped by month with monthly totals.
 - Tap a fill-up to edit it, swipe left to delete (with Undo), and tap 🧾 to see the receipt photo.
 
@@ -38,7 +46,7 @@ No sign-up, no server, no ads. Everything stays on your phone.
 - **Multiple vehicles** (car, motorbike…), each with its own tank size, budget and history. Switch from the top bar.
 - **Day / night mode**: follows your phone, or set it yourself with the 🌙/☀️ button. Night mode is modelled on a car's instrument cluster at night.
 - **Works offline** and installs to your home screen like a normal app.
-- Export a **backup (JSON)** or **CSV**, and import a backup on another phone. On a phone, Back up opens the share sheet so you can save it straight to Google Drive, Files or WhatsApp.
+- Export a **backup (JSON, includes car costs)** or **CSV** (fill-ups, plus a second file for car costs), and import a backup on another phone. On a phone, Back up opens the share sheet so you can save it straight to Google Drive, Files or WhatsApp.
 - **Home-screen shortcuts** (Android): long-press the app icon for **Isi minyak** or **Update range**.
 
 ## How consumption is worked out

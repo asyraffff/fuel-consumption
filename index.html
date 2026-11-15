@@ -231,15 +231,37 @@
   .vehbtn svg { width: 18px; height: 18px; color: var(--muted); flex: none; }
   .vehbtn img { width: 26px; height: 26px; border-radius: 7px; }
   .top h1 .sub { font-size: 14px; color: var(--muted); font-weight: 500; }
-  #vehDlg, #checkDlg { width: min(92vw, 380px); }
+  #vehDlg, #checkDlg, #costDlg, #remDlg { width: min(92vw, 400px); }
+  #costDlg, #remDlg { overflow: auto; }
   @media (max-width: 600px) { /* bottom sheet on phones: easy to reach with a thumb */
-    #vehDlg, #checkDlg { margin: auto 0 0; width: 100%; max-width: 100%; border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+    #vehDlg, #checkDlg, #costDlg, #remDlg { margin: auto 0 0; width: 100%; max-width: 100%; border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom); }
   }
   #vehList button { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; border-radius: 0;
     border-bottom: 1px solid var(--line); padding: 14px; background: none; text-align: left; }
   #vehList button span { color: var(--muted); font-size: 13px; }
   #vehList button[aria-pressed="true"] { background: var(--accent-soft); }
   #vehList button[aria-pressed="true"] b { color: var(--accent); }
+
+  /* car costs + reminders */
+  .sheet { padding: 14px 14px 18px; display: grid; gap: 12px; }
+  .pills.cats { grid-template-columns: repeat(4, 1fr); }
+  .pills.cats button { min-height: 40px; font-size: 13.5px; }
+  .addcost { width: 100%; border: 1.5px dashed var(--accent); color: var(--accent); background: transparent; font-weight: 600; padding: 12px; margin-bottom: 14px; border-radius: 12px; }
+  .minifoot { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
+  .minifoot .link { min-height: 44px; font-size: 14px; }
+  .due .k { color: var(--muted); font-size: 13px; }
+  .duerow { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+  .duerow + .duerow { border-top: 1px solid var(--line); }
+  .duerow > div { flex: 1; min-width: 0; }
+  .duerow .s { color: var(--muted); font-size: 13px; }
+  .duerow .s.bad { color: var(--danger); }
+  .duerow button { min-height: 40px; padding: 8px 16px; flex: none; }
+  .remrow { display: grid; gap: 2px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; padding: 12px 0; }
+  .remrow:last-child { border-bottom: 0; }
+  .remrow small { color: var(--muted); font-size: 13px; }
+  .remrow small.bad { color: var(--danger); font-weight: 600; }
+  .remrow small.warnt { color: var(--warn); }
+  #k-rems .check { min-height: 40px; }
 
   /* history */
   .month { margin-bottom: 16px; }
@@ -275,7 +297,9 @@
   dialog { border: 0; padding: 0; border-radius: 14px; max-width: min(92vw, 560px); max-height: 90vh; background: var(--card); color: var(--text); }
   dialog::backdrop { background: rgba(0,0,0,.6); }
   dialog img { display: block; max-width: 100%; max-height: calc(90vh - 56px); margin: 0 auto; }
-  dialog .bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 8px 8px 14px; border-bottom: 1px solid var(--line); }
+  dialog .bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 8px 8px 14px; border-bottom: 1px solid var(--line);
+    height: auto; overflow: visible; margin: 0; background: none; border-radius: 0; }
+  dialog .bar button { min-height: 40px; }
 </style>
 </head>
 <body>
@@ -316,11 +340,14 @@
         <div class="foot" id="heroFoot"></div>
       </div>
 
+      <div class="card due" id="dueCard" hidden></div>
+
       <div class="card">
         <div class="chips" role="group" aria-label="Period" id="periodChips">
           <button data-p="month">Month</button><button data-p="3m">3 months</button><button data-p="year">Year</button><button data-p="all">All</button>
         </div>
         <div class="mini" id="miniStats"></div>
+        <div class="minifoot"><button class="link" id="addCostLink">+ Car cost</button><button class="link" id="shareReport">Share report</button></div>
         <div class="tabs" role="tablist" aria-label="Chart" id="chartTabs">
           <button role="tab" data-c="spend">Spending</button><button role="tab" data-c="price">Price / L</button><button role="tab" data-c="eff" id="effTab">km/L</button>
         </div>
@@ -332,6 +359,8 @@
 
   <!-- HISTORY -->
   <section id="view-history" hidden>
+    <div class="tabs" role="tablist" aria-label="History" id="histTabs" style="grid-template-columns:1fr 1fr;margin:0 0 14px">
+      <button role="tab" data-h="fuel">Fuel</button><button role="tab" data-h="costs">Car costs</button></div>
     <div id="historyList"></div>
     <div class="hint" id="historyHint" style="text-align:center;margin-top:4px">Tap a fill-up to edit · swipe left to delete</div>
   </section>
@@ -429,6 +458,10 @@
       <button id="delVeh" class="danger" style="margin-top:12px">Delete this vehicle</button>
     </div>
     <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:4px"><h2 style="margin:0">Service reminders</h2><button id="addRem" class="link">+ Add</button></div>
+      <div id="remList"></div>
+    </div>
+    <div class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:4px"><h2 style="margin:0">BUDI95 subsidy</h2>
         <label class="check" style="margin:0"><input id="s-budiOn" type="checkbox"> I get BUDI95</label></div>
       <div id="budiFields">
@@ -485,6 +518,41 @@
     </div>
   </form>
 </dialog>
+<dialog id="costDlg" aria-labelledby="costTitle">
+  <form id="costForm" novalidate>
+    <div class="bar"><strong id="costTitle">Add car cost</strong><button type="button" onclick="this.closest('dialog').close()">Close</button></div>
+    <div class="sheet">
+      <input type="hidden" id="k-id"><input type="hidden" id="k-cat" value="service">
+      <div class="pills cats" role="radiogroup" aria-label="Type of cost" id="catPills"></div>
+      <div class="grid2">
+        <div><label for="k-amount">Amount (RM)</label><input id="k-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+        <div><label for="k-date">Date</label><input id="k-date" type="date"></div>
+        <div><label for="k-odo">Odometer <span class="opt">(optional)</span></label><input id="k-odo" type="number" inputmode="numeric" min="0" step="1"></div>
+        <div><label for="k-note">Note <span class="opt">(optional)</span></label><input id="k-note" type="text" maxlength="60" placeholder="e.g. 5W-30, filter"></div>
+      </div>
+      <div id="k-rems"></div>
+      <div class="row" style="flex-wrap:nowrap"><button type="button" class="danger" id="k-del" hidden>Delete</button><button class="primary" type="submit" style="flex:1;padding:12px">Save</button></div>
+    </div>
+  </form>
+</dialog>
+<dialog id="remDlg" aria-labelledby="remTitle">
+  <form id="remForm" novalidate>
+    <div class="bar"><strong id="remTitle">New reminder</strong><button type="button" onclick="this.closest('dialog').close()">Close</button></div>
+    <div class="sheet">
+      <input type="hidden" id="r-id">
+      <div class="recent" id="remPresets" role="group" aria-label="Common reminders" style="margin:0"></div>
+      <div><label for="r-name">What</label><input id="r-name" type="text" maxlength="40" placeholder="e.g. Oil change"></div>
+      <div class="grid2">
+        <div><label for="r-km">Every (km)</label><input id="r-km" type="number" inputmode="numeric" min="0" step="500" placeholder="e.g. 10000"></div>
+        <div><label for="r-months">or every (months)</label><input id="r-months" type="number" inputmode="numeric" min="0" step="1" placeholder="e.g. 6"></div>
+        <div><label for="r-lastDate">Last done</label><input id="r-lastDate" type="date"></div>
+        <div><label for="r-lastKm">at odometer (km)</label><input id="r-lastKm" type="number" inputmode="numeric" min="0" step="1"></div>
+      </div>
+      <div class="hint" style="margin:0">Whichever comes first. Leave "last done" blank to start counting from today.</div>
+      <div class="row" style="flex-wrap:nowrap"><button type="button" class="danger" id="r-del" hidden>Delete</button><button class="primary" type="submit" style="flex:1;padding:12px">Save</button></div>
+    </div>
+  </form>
+</dialog>
 <dialog id="vehDlg" aria-label="Choose vehicle">
   <div class="bar"><strong>Vehicle</strong><button type="button" onclick="this.closest('dialog').close()">Close</button></div>
   <div id="vehList"></div>
@@ -504,6 +572,8 @@
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { toast('Could not save: storage full or blocked'); } };
 
   let entries = load(KEY, []);
+  const CKEY = 'fuellog.costs.v1';
+  let costs = load(CKEY, []); // other car costs: { id, vehicleId, date, cat, amount, odo, note, done: [reminder ids] }
   let settings = Object.assign({ unit: 'kmpl', period: 'all', theme: 'auto' }, load(SKEY, {}));
   const saveSettings = () => save(SKEY, settings);
   // BUDI95 (Malaysia): RON95 at RM1.99/L up to a monthly quota per person (300 L since 1 Sep 2026; e-hailing 800 L).
@@ -1046,7 +1116,7 @@
       `<div>${nf?.checked ? `Checked dashboard ${daysAgo(nf.checked)}` : `Filled ${daysAgo(last.date)} · ${num(last.odo, 0)} km`}` +
       ' · <button class="link upd" id="rangeUpd" aria-label="Update the range from your dashboard">Update</button></div></div>';
 
-    renderNudge(s, nf);
+    renderNudge(s, nf); renderDue();
 
     // BUDI95 quota: per person, so counted across every vehicle
     const qEl = $('#budiLine');
@@ -1065,12 +1135,16 @@
     const pAvg = avgOf(pL), avgPrice = pLitres ? pSpent / pLitres : null, rmKm = pAvg && avgPrice ? avgPrice / pAvg : null;
     const best = pL.length ? Math.max(...pL.map(x => x.kmpl)) : null, worst = pL.length ? Math.min(...pL.map(x => x.kmpl)) : null;
     const [bv] = effParts(best), [wv] = effParts(worst);
+    const pc = myCosts().filter(c => inPeriod(c.date, p)), pOther = pc.reduce((a, c) => a + c.amount, 0), pKm = kmIn(s, p);
     const mini = [
-      ['Spent', rm(pSpent), `${ps.length} fill-up${ps.length === 1 ? '' : 's'}`],
-      ['Fuel', num(pLitres, 1) + ' L', avgPrice ? 'avg RM ' + num(avgPrice, 2) + '/L' : ''],
-      ['Cost per km', rmKm ? 'RM ' + num(rmKm, 2) : '–', rmKm ? 'RM ' + num(rmKm * 100, 0) + ' / 100 km' : ''],
+      ['Fuel spent', rm(pSpent), `${ps.length} fill-up${ps.length === 1 ? '' : 's'}`],
+      ['Litres', num(pLitres, 1) + ' L', avgPrice ? 'avg RM ' + num(avgPrice, 2) + '/L' : ''],
+      ['Fuel per km', rmKm ? 'RM ' + num(rmKm, 2) : '–', rmKm ? 'RM ' + num(rmKm * 100, 0) + ' / 100 km' : ''],
       ['Consumption', effText(pAvg), pL.length > 1 ? `best ${bv} · worst ${wv}` : ''],
     ];
+    if (pc.length) mini.push(
+      ['Car costs', rm(pOther), topCats(pc)],
+      ['All-in per km', pKm > 0 ? 'RM ' + num((pSpent + pOther) / pKm, 2) : '–', 'fuel + car costs']);
     $('#miniStats').innerHTML = ps.length ? mini.map(([k, v, sub]) => `<div><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`).join('')
       : '<div class="hint" style="grid-column:1/-1">No fill-ups in this period.</div>';
 
@@ -1108,6 +1182,275 @@
   let lastW = innerWidth;
   addEventListener('resize', () => { if (Math.abs(innerWidth - lastW) > 20 && view === 'home') { lastW = innerWidth; renderHome(); } });
 
+  /* ---------- car costs ---------- */
+  const CATS = { service: ['🔧', 'Service'], tyres: ['🛞', 'Tyres'], repair: ['🔩', 'Repair'], insurance: ['🛡️', 'Insurance'],
+    roadtax: ['📄', 'Road tax'], toll: ['🛣️', 'Toll'], parking: ['🅿️', 'Parking'], other: ['🧾', 'Other'] };
+  const catName = c => (CATS[c] || CATS.other)[1], catIcon = c => (CATS[c] || CATS.other)[0];
+  const myCosts = () => costs.filter(c => c.vehicleId === settings.current);
+  const topCats = list => {
+    const by = {}; list.forEach(c => by[c.cat] = (by[c.cat] || 0) + c.amount);
+    return Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([c]) => catName(c)).join(', ');
+  };
+  // km driven in a period: last odometer in it minus the last one before it
+  const kmIn = (s, p) => {
+    const inP = s.filter(x => inPeriod(x.date, p)); if (!inP.length) return 0;
+    const prev = s.filter(x => x.date < inP[0].date).at(-1);
+    return inP.at(-1).odo - (prev ?? inP[0]).odo;
+  };
+  // usual km per day over the last ~4 months of fill-ups
+  function paceOf(s) {
+    if (s.length < 2) return null;
+    const last = s.at(-1), recent = s.filter(x => (new Date(last.date) - new Date(x.date)) / 864e5 <= 120);
+    const pool = recent.length >= 2 ? recent : s.slice(-2);
+    const v = (last.odo - pool[0].odo) / Math.max(1, (new Date(last.date) - new Date(pool[0].date)) / 864e5);
+    return v > 0 ? v : null;
+  }
+  // best guess of the odometer today: newest reading (fill-up, dashboard check or cost) plus usual km/day since
+  function odoNow() {
+    const s = sorted(), pts = s.map(x => [x.date, x.odo]), chk = veh().check;
+    if (chk?.odo) pts.push([chk.date, chk.odo]);
+    myCosts().forEach(c => c.odo && pts.push([c.date, c.odo]));
+    if (!pts.length) return null;
+    const best = pts.reduce((a, b) => b[1] > a[1] ? b : a);
+    return best[1] + (paceOf(s) || 0) * Math.max(0, daysSince(best[0]));
+  }
+  const odoOn = date => daysSince(date) <= 3 ? odoNow() : sorted().filter(x => x.date <= date).at(-1)?.odo ?? null;
+
+  const costDlg = $('#costDlg');
+  let remTouched = false;
+  $('#catPills').innerHTML = Object.entries(CATS).map(([k, [, n]]) => `<button type="button" role="radio" data-c="${k}">${n}</button>`).join('');
+  function setCat(c) {
+    $('#k-cat').value = c;
+    $$('#catPills button').forEach(b => b.setAttribute('aria-checked', b.dataset.c === c));
+    if (!remTouched) $$('#k-rems input').forEach(i => i.checked = (veh().reminders || []).find(r => r.id === i.dataset.rem)?.cat === c);
+  }
+  $('#catPills').onclick = e => { const b = e.target.closest('button'); if (b) setCat(b.dataset.c); };
+  function openCost(id, preset = {}) {
+    const c = costs.find(x => x.id === id), rs = veh().reminders || [];
+    remTouched = !!c || !!preset.remId;
+    $('#costTitle').textContent = c ? 'Edit car cost' : 'Add car cost';
+    $('#k-id').value = c?.id || '';
+    $('#k-amount').value = c?.amount ?? ''; $('#k-date').value = c?.date || today();
+    $('#k-odo').value = c?.odo ?? (preset.odo ? Math.round(preset.odo) : ''); $('#k-note').value = c?.note || '';
+    const ticked = c ? (c.done || []) : preset.remId ? [preset.remId] : [];
+    $('#k-rems').innerHTML = rs.length ? '<span class="lbl">Also mark as done</span>' + rs.map(r =>
+      `<label class="check"><input type="checkbox" data-rem="${r.id}"${ticked.includes(r.id) ? ' checked' : ''}> ${esc(r.name)}</label>`).join('') : '';
+    setCat(c?.cat || preset.cat || 'service');
+    $('#k-del').hidden = !c;
+    costDlg.showModal();
+  }
+  $('#k-rems').addEventListener('change', () => remTouched = true);
+  costDlg.onclick = e => { if (e.target === costDlg) costDlg.close(); };
+  $('#costForm').onsubmit = e => {
+    e.preventDefault();
+    const amount = +$('#k-amount').value;
+    if (!(amount > 0)) { toast('Enter the amount'); $('#k-amount').focus(); return; }
+    const id = $('#k-id').value || 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), old = costs.find(x => x.id === id);
+    const done = $$('#k-rems input:checked').map(i => i.dataset.rem);
+    const c = { id, vehicleId: old?.vehicleId || settings.current, date: $('#k-date').value || today(), cat: $('#k-cat').value, amount,
+      odo: +$('#k-odo').value || null, note: $('#k-note').value.trim(), done };
+    costs = costs.filter(x => x.id !== id).concat(c); save(CKEY, costs);
+    const v = settings.vehicles.find(v => v.id === c.vehicleId);
+    done.forEach(rid => {
+      const r = v?.reminders?.find(r => r.id === rid);
+      if (r && (!r.lastDate || c.date >= r.lastDate)) { r.lastDate = c.date; const o = c.odo || odoOn(c.date); if (o) r.lastKm = Math.round(o); }
+    });
+    saveSettings(); costDlg.close();
+    toast(old ? 'Cost updated' : `${catName(c.cat)} ${rm(amount)} added`); refreshView();
+  };
+  $('#k-del').onclick = () => { const id = $('#k-id').value; costDlg.close(); deleteCost(id); };
+  function deleteCost(id) {
+    const c = costs.find(x => x.id === id); if (!c) return;
+    costs = costs.filter(x => x.id !== id); save(CKEY, costs); openRow = null; refreshView();
+    toast('Cost deleted', 'Undo', () => { costs.push(c); save(CKEY, costs); refreshView(); });
+  }
+  function refreshView() { if (view === 'home') renderHome(); if (view === 'history') renderHistory(); if (view === 'settings') renderSettings(); }
+  $('#addCostLink').onclick = () => openCost();
+  $('#histTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; settings.histTab = b.dataset.h; saveSettings(); renderHistory(); };
+  document.addEventListener('click', e => { if (e.target.closest('#histAddCost')) openCost(); });
+
+  function renderCosts() {
+    const list = myCosts().sort((a, b) => b.date.localeCompare(a.date) || (b.odo || 0) - (a.odo || 0));
+    const add = '<button class="addcost" id="histAddCost">+ Add car cost</button>';
+    $('#historyHint').hidden = !list.length; $('#historyHint').textContent = 'Tap to edit · swipe left to delete';
+    if (!list.length) {
+      $('#historyList').innerHTML = add + `<div class="card empty"><div class="big">🔧</div><h2>No car costs yet</h2>
+        <p>Add service, tyres, road tax, insurance, tolls and parking to see what ${esc(veh().name)} really costs per km.</p></div>`;
+      return;
+    }
+    const groups = [];
+    list.forEach(c => { const k = c.date.slice(0, 7); (groups.at(-1)?.k === k ? groups.at(-1) : (groups.push({ k, items: [] }), groups.at(-1))).items.push(c); });
+    $('#historyList').innerHTML = add + groups.map(g => {
+      const name = new Date(g.k + '-01T00:00').toLocaleDateString('en-MY', { month: 'long', year: 'numeric' });
+      return `<div class="month"><div class="mh"><b>${name}</b><span>${rm(g.items.reduce((a, c) => a + c.amount, 0))}</span></div><div class="list">` +
+        g.items.map(c => `<div class="swipe" data-id="${c.id}"><button class="del" tabindex="-1">Delete</button>
+          <div class="front" role="button" tabindex="0" aria-label="Edit ${catName(c.cat)} on ${fmtDate(c.date)}">
+            <div class="t">${catIcon(c.cat)} ${catName(c.cat)}</div><div class="amt">${rm(c.amount)}</div>
+            <div class="m">${[fmtDay(c.date), c.odo ? num(c.odo, 0) + ' km' : '', esc(c.note || '')].filter(Boolean).join(' · ')}</div><div class="eff"></div>
+          </div></div>`).join('') + '</div></div>';
+    }).join('');
+    $$('#historyList .swipe').forEach(r => bindSwipe(r, openCost, deleteCost));
+  }
+
+  /* ---------- service reminders ---------- */
+  const PRESETS = [
+    { name: 'Oil change', km: 10000, months: 6, cat: 'service' },
+    { name: 'Road tax', months: 12, cat: 'roadtax' },
+    { name: 'Insurance', months: 12, cat: 'insurance' },
+    { name: 'Tyre rotation', km: 10000, cat: 'tyres' },
+    { name: 'Battery', months: 24, cat: 'repair' },
+    { name: 'Brake check', km: 20000, cat: 'service' },
+  ];
+  const shortDate = d => new Date(d + 'T00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short', ...(d.slice(0, 4) !== today().slice(0, 4) ? { year: 'numeric' } : {}) });
+  function remStatus(r) {
+    const now = odoNow(), pace = paceOf(sorted());
+    let kmLeft = null, daysLeft = null, dueDate = null;
+    if (+r.km && r.lastKm != null && r.lastKm !== '' && now != null) kmLeft = +r.lastKm + +r.km - now;
+    if (+r.months && r.lastDate) { const d = new Date(r.lastDate + 'T00:00'); d.setMonth(d.getMonth() + +r.months); dueDate = localISO(d); daysLeft = -daysSince(dueDate); }
+    const kmDays = kmLeft != null && pace ? kmLeft / pace : null;
+    const overdue = (kmLeft != null && kmLeft < 0) || (daysLeft != null && daysLeft < 0);
+    const soon = overdue || (kmLeft != null && kmLeft <= 1000) || (daysLeft != null && daysLeft <= 30);
+    const parts = [];
+    if (kmLeft != null) parts.push(kmLeft < 0 ? `${num(-kmLeft, 0)} km overdue` : `in ${num(kmLeft, 0)} km`);
+    if (dueDate) parts.push(daysLeft < 0 ? `was due ${shortDate(dueDate)}` : daysLeft === 0 ? 'due today' : `by ${shortDate(dueDate)}`);
+    return { overdue, soon, order: Math.min(daysLeft ?? Infinity, kmDays ?? Infinity), text: parts.join(' · ') || 'Add when it was last done' };
+  }
+  function renderDue() {
+    const rs = (veh().reminders || []).map(r => ({ r, st: remStatus(r) })).filter(x => x.st.soon).sort((a, b) => a.st.order - b.st.order);
+    const el = $('#dueCard'); el.hidden = !rs.length; if (!rs.length) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="k">Coming up</div>' + rs.map(({ r, st }) =>
+      `<div class="duerow"><div><b>${esc(r.name)}</b><div class="s${st.overdue ? ' bad' : ''}">${st.text}</div></div><button data-done="${r.id}">Done</button></div>`).join('');
+  }
+  $('#dueCard').onclick = e => {
+    const b = e.target.closest('[data-done]'); if (!b) return;
+    const r = veh().reminders.find(x => x.id === b.dataset.done); if (!r) return;
+    const o = odoNow(); r.lastDate = today(); if (o) r.lastKm = Math.round(o); saveSettings(); renderHome();
+    toast(`${r.name} marked done`, 'Add cost', () => openCost(null, { cat: r.cat || 'service', remId: r.id, odo: o }));
+  };
+  function renderRems() {
+    const rs = veh().reminders || [];
+    $('#remList').innerHTML = rs.length ? rs.map(r => {
+      const st = remStatus(r), every = [+r.km ? num(+r.km, 0) + ' km' : '', +r.months ? r.months + ' month' + (+r.months === 1 ? '' : 's') : ''].filter(Boolean).join(' or ');
+      return `<button class="remrow" data-rem="${r.id}"><span><b>${esc(r.name)}</b> <small>· every ${every}</small></span><small class="${st.overdue ? 'bad' : st.soon ? 'warnt' : ''}">Next ${st.text}</small></button>`;
+    }).join('') : '<div class="hint" style="margin:6px 0 0">Get a heads-up before the oil change, road tax or insurance is due.</div>';
+  }
+  const remDlg = $('#remDlg');
+  remDlg.onclick = e => { if (e.target === remDlg) remDlg.close(); };
+  let remCat = null;
+  function openRem(id) {
+    const rs = veh().reminders || [], r = rs.find(x => x.id === id);
+    $('#remTitle').textContent = r ? 'Edit reminder' : 'New reminder';
+    $('#r-id').value = r?.id || ''; $('#r-name').value = r?.name || ''; $('#r-km').value = r?.km || ''; $('#r-months').value = r?.months || '';
+    $('#r-lastDate').value = r?.lastDate || ''; $('#r-lastKm').value = r?.lastKm ?? ''; remCat = r?.cat ?? null;
+    const o = odoNow(); $('#r-lastKm').placeholder = o ? 'now ≈ ' + Math.round(o) : '';
+    const free = PRESETS.filter(p => !rs.some(x => x.name.toLowerCase() === p.name.toLowerCase()));
+    $('#remPresets').innerHTML = r ? '' : free.map(p => `<button type="button" data-p="${p.name}">${p.name}</button>`).join('');
+    $('#remPresets').hidden = !!r || !free.length;
+    $('#r-del').hidden = !r; remDlg.showModal();
+  }
+  $('#remPresets').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const p = PRESETS.find(x => x.name === b.dataset.p);
+    $('#r-name').value = p.name; $('#r-km').value = p.km || ''; $('#r-months').value = p.months || ''; remCat = p.cat;
+    $$('#remPresets button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  };
+  $('#addRem').onclick = () => openRem();
+  $('#remList').onclick = e => { const b = e.target.closest('[data-rem]'); if (b) openRem(b.dataset.rem); };
+  $('#remForm').onsubmit = e => {
+    e.preventDefault();
+    const name = $('#r-name').value.trim(), km = +$('#r-km').value || null, months = +$('#r-months').value || null;
+    if (!name) { toast('Give the reminder a name'); $('#r-name').focus(); return; }
+    if (!km && !months) { toast('Set every how many km or months'); $('#r-km').focus(); return; }
+    const v = veh(); v.reminders = v.reminders || [];
+    const id = $('#r-id').value || 'r' + Date.now().toString(36), old = v.reminders.find(x => x.id === id);
+    let lastDate = $('#r-lastDate').value || null, lastKm = $('#r-lastKm').value === '' ? null : +$('#r-lastKm').value;
+    if (!lastDate && lastKm == null) { lastDate = today(); const o = odoNow(); lastKm = o ? Math.round(o) : null; } // start counting now
+    const r = { id, name, km, months, lastDate, lastKm, cat: remCat ?? old?.cat ?? null };
+    v.reminders = old ? v.reminders.map(x => x.id === id ? r : x) : v.reminders.concat(r);
+    saveSettings(); remDlg.close(); renderRems(); toast(old ? 'Reminder updated' : 'Reminder added');
+  };
+  $('#r-del').onclick = () => {
+    const v = veh(), id = $('#r-id').value, r = v.reminders.find(x => x.id === id);
+    v.reminders = v.reminders.filter(x => x.id !== id); saveSettings(); remDlg.close(); renderRems();
+    toast('Reminder deleted', 'Undo', () => { v.reminders.push(r); saveSettings(); renderRems(); });
+  };
+
+  /* ---------- shareable report (PNG) for the period picked on Home ---------- */
+  async function shareFile(file, title) {
+    if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file], title }); return 'shared'; }
+      catch (e) { if (e.name === 'AbortError') return 'aborted'; }
+    }
+    download(file.name, file); return 'downloaded';
+  }
+  function reportData() {
+    const p = settings.period, s = sorted(), ps = s.filter(x => inPeriod(x.date, p)), pc = myCosts().filter(c => inPeriod(c.date, p));
+    const fuel = ps.reduce((a, x) => a + x.total, 0), litres = ps.reduce((a, x) => a + x.litres, 0), other = pc.reduce((a, c) => a + c.amount, 0);
+    const km = kmIn(s, p), avg = avgOf(legs().filter(x => inPeriod(x.date, p)));
+    const saved = settings.budi.on ? ps.filter(isBudi).reduce((a, x) => a + x.litres, 0) * Math.max(0, (+settings.budi.market || 0) - budiPrice()) : 0;
+    const byCat = {}; pc.forEach(c => byCat[c.cat] = (byCat[c.cat] || 0) + c.amount);
+    const months = {}; ps.forEach(x => { const k = x.date.slice(0, 7); months[k] = months[k] || [0, 0]; months[k][0] += x.total; });
+    pc.forEach(c => { const k = c.date.slice(0, 7); months[k] = months[k] || [0, 0]; months[k][1] += c.amount; });
+    const dates = ps.map(x => x.date).concat(pc.map(c => c.date)).sort(), now = new Date();
+    const label = p === 'month' ? now.toLocaleDateString('en-MY', { month: 'long', year: 'numeric' })
+      : p === '3m' ? 'Last 3 months · to ' + fmtDate(today()) : p === 'year' ? String(now.getFullYear())
+      : dates.length ? fmtDate(dates[0]) + ' – ' + fmtDate(dates.at(-1)) : 'All time';
+    return { ps, pc, fuel, litres, other, km, avg, saved, byCat, months, label };
+  }
+  $('#shareReport').onclick = async () => {
+    const d = reportData();
+    if (!d.ps.length && !d.pc.length) { toast('Nothing logged in this period'); return; }
+    const W = 1080, P = 72, rows = [];
+    rows.push(['⛽ Fuel', rm(d.fuel), `${d.ps.length} fill-up${d.ps.length === 1 ? '' : 's'} · ${num(d.litres, 1)} L`]);
+    Object.entries(d.byCat).sort((a, b) => b[1] - a[1]).forEach(([c, v]) => rows.push([catIcon(c) + ' ' + catName(c), rm(v), '']));
+    const stats = [];
+    if (d.km > 0) stats.push(['Distance', num(d.km, 0) + ' km']);
+    if (d.avg) stats.push(['Consumption', effText(d.avg)]);
+    if (d.km > 0) stats.push(['Cost per km', 'RM ' + num((d.fuel + d.other) / d.km, 2) + (d.other ? ' all-in' : '')]);
+    if (d.saved >= 1) stats.push(['BUDI95 saved', '≈ ' + rm(d.saved)]);
+    const mk = Object.keys(d.months).sort().slice(-12), showBars = mk.length >= 2;
+    const H = 330 + rows.reduce((t, r) => t + (r[2] ? 126 : 92), 0) + 40 + (stats.length ? stats.length * 74 + 66 : 0) + (showBars ? 380 : 0) + 120;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+    const C = { bg: '#eef2f0', card: '#ffffff', text: '#111827', muted: '#6b7280', line: '#e5e7eb', accent: '#0f766e', other: '#d97706' };
+    const font = (w, sz) => g.font = `${w} ${sz}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+    g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+    g.fillStyle = C.card; g.beginPath(); g.roundRect(32, 32, W - 64, H - 64, 36); g.fill();
+    let y = P + 60;
+    g.fillStyle = C.muted; font(600, 32); g.fillText('Fuel Log report · ' + d.label, P, y);
+    y += 70; g.fillStyle = C.text; font(800, 60); g.fillText(veh().name, P, y);
+    y += 110; font(800, 96); g.fillText(rm(d.fuel + d.other), P, y);
+    y += 46; g.fillStyle = C.muted; font(500, 32); g.fillText('total spent', P, y);
+    y += 40;
+    rows.forEach(([k, v, sub]) => {
+      g.strokeStyle = C.line; g.lineWidth = 2; g.beginPath(); g.moveTo(P, y); g.lineTo(W - P, y); g.stroke();
+      y += 56; g.fillStyle = C.text; font(600, 38); g.fillText(k, P, y);
+      g.textAlign = 'right'; font(700, 38); g.fillText(v, W - P, y); g.textAlign = 'left';
+      if (sub) { g.fillStyle = C.muted; font(500, 28); g.fillText(sub, P + 58, y + 34); }
+      y += sub ? 70 : 36;
+    });
+    if (stats.length) { y += 30; g.fillStyle = C.bg; g.beginPath(); g.roundRect(P - 16, y, W - 2 * P + 32, stats.length * 74 + 24, 24); g.fill(); y += 12; }
+    stats.forEach(([k, v]) => { y += 52; g.fillStyle = C.muted; font(500, 34); g.fillText(k, P + 8, y); g.textAlign = 'right'; g.fillStyle = C.text; font(700, 36); g.fillText(v, W - P - 8, y); g.textAlign = 'left'; y += 22; });
+    y += 12;
+    if (showBars) {
+      y += 70; g.fillStyle = C.muted; font(600, 30); g.fillText('Per month', P, y);
+      g.fillStyle = C.accent; g.fillRect(W - P - 300, y - 22, 22, 22); g.fillStyle = C.muted; font(500, 26); g.fillText('Fuel', W - P - 268, y);
+      g.fillStyle = C.other; g.fillRect(W - P - 170, y - 22, 22, 22); g.fillStyle = C.muted; g.fillText('Car costs', W - P - 138, y);
+      const top = y + 30, base = top + 230, max = Math.max(...mk.map(k => d.months[k][0] + d.months[k][1])), bw = (W - 2 * P) / mk.length;
+      mk.forEach((k, i) => {
+        const [f, o] = d.months[k], x = P + i * bw + bw * 0.18, w = bw * 0.64, hf = f / max * 210, ho = o / max * 210;
+        g.fillStyle = C.accent; g.fillRect(x, base - hf, w, hf); g.fillStyle = C.other; g.fillRect(x, base - hf - ho, w, ho);
+        g.fillStyle = C.muted; font(500, 24); g.textAlign = 'center';
+        g.fillText(new Date(k + '-01T00:00').toLocaleDateString('en-MY', { month: 'short' }), x + w / 2, base + 36); g.textAlign = 'left';
+      });
+      y = base + 40;
+    }
+    g.fillStyle = C.muted; font(500, 24); g.fillText('Made with Fuel Log · ' + fmtDate(today()), P, H - P + 6);
+    const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+    const name = `fuel-log-${veh().name.replace(/[^\w-]+/g, '-')}-${today()}.png`.toLowerCase();
+    const res = await shareFile(new File([blob], name, { type: 'image/png' }), 'Fuel Log report');
+    if (res === 'downloaded') toast('Report saved as an image');
+  };
+
   // One reminder at a time above the summary: a fill-up you may have forgotten to log, else a backup that's due.
   const daysSince = d => Math.round((new Date(today() + 'T00:00') - new Date(d + 'T00:00')) / 864e5);
   function renderNudge(s, nf) {
@@ -1120,7 +1463,7 @@
       html = `<div class="msg">${emptyByNow ? 'By our estimate your tank is about empty' : `It's been <b>${since} days</b> since your last fill-up`}. Isi minyak and forgot to log it?</div>
         <div class="acts"><button class="later" data-nudge="fill">Not yet</button><button class="primary" data-go="add">Log it</button></div>`;
     } else {
-      const total = entries.length, lb = settings.lastBackup, snooze = settings.backupSnooze;
+      const total = entries.length + costs.length, lb = settings.lastBackup, snooze = settings.backupSnooze;
       const due = total >= 5 && (!lb || daysSince(lb) >= 30) && !(snooze && snooze > today());
       if (due) html = `<div class="msg">${lb ? `Last backup <b>${daysAgo(lb)}</b>` : `<b>${total} fill-ups</b> are only on this phone`}. Save a backup in case you change phones.</div>
         <div class="acts"><button class="later" data-nudge="backup">Later</button><button class="primary" id="nudgeBackup">Back up</button></div>`;
@@ -1254,6 +1597,10 @@
 
   /* ---------- history ---------- */
   function renderHistory() {
+    const tab = settings.histTab === 'costs' ? 'costs' : 'fuel';
+    $$('#histTabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.h === tab));
+    if (tab === 'costs') return renderCosts();
+    $('#historyHint').textContent = 'Tap a fill-up to edit · swipe left to delete';
     const L = Object.fromEntries(legs().map(x => [x.id, x])), s = sorted().reverse();
     $('#historyHint').hidden = !s.length;
     if (!s.length) {
@@ -1287,7 +1634,7 @@
 
   let openRow = null;
   const closeRow = r => { if (!r) return; r.querySelector('.front').style.transform = ''; r._open = false; if (openRow === r) openRow = null; };
-  function bindSwipe(row) {
+  function bindSwipe(row, edit = editEntry, del = deleteEntry) {
     const front = row.querySelector('.front'), id = row.dataset.id, OPEN = -88;
     let x0, y0, dx = 0, down = false, moved = false;
     front.addEventListener('pointerdown', e => {
@@ -1308,18 +1655,18 @@
     });
     const end = () => {
       if (!down) return; down = false; front.style.transition = '';
-      if (!moved) { if (row._open) closeRow(row); else editEntry(id); return; }
-      if (dx < -row.offsetWidth * 0.55) { front.style.transform = `translateX(-100%)`; setTimeout(() => deleteEntry(id), 160); }
+      if (!moved) { if (row._open) closeRow(row); else edit(id); return; }
+      if (dx < -row.offsetWidth * 0.55) { front.style.transform = `translateX(-100%)`; setTimeout(() => del(id), 160); }
       else if (dx < OPEN / 2) { front.style.transform = `translateX(${OPEN}px)`; row._open = true; openRow = row; }
       else closeRow(row);
     };
     front.addEventListener('pointerup', end);
     front.addEventListener('pointercancel', () => { down = false; front.style.transition = ''; closeRow(row); });
     front.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); editEntry(id); }
-      if (e.key === 'Delete' || e.key === 'Backspace') deleteEntry(id);
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); edit(id); }
+      if (e.key === 'Delete' || e.key === 'Backspace') del(id);
     });
-    row.querySelector('.del').onclick = () => deleteEntry(id);
+    row.querySelector('.del').onclick = () => del(id);
     row.querySelector('.rcpt')?.addEventListener('click', async e => {
       e.stopPropagation();
       const x = entries.find(v => v.id === id); let src = null; try { src = await idb.get(id); } catch {}
@@ -1358,6 +1705,7 @@
     $('#s-name').value = v.name; $('#s-tank').value = v.tank; $('#s-budget').value = v.budget; $('#s-steps').value = String(steps());
     $('#delVeh').hidden = settings.vehicles.length < 2;
     $$('#unitTabs button').forEach(b => b.setAttribute('aria-checked', b.dataset.u === settings.unit));
+    renderRems();
     $('#s-budiOn').checked = settings.budi.on; $('#budiFields').hidden = !settings.budi.on;
     $('#s-budiQuota').value = settings.budi.quota; $('#s-budiPrice').value = settings.budi.price; $('#s-marketPrice').value = settings.budi.market;
   }
@@ -1379,19 +1727,16 @@
     const v = veh(), n = mine().length;
     if (!confirm(`Delete "${v.name}"${n ? ` and its ${n} fill-up${n === 1 ? '' : 's'}` : ''}? This cannot be undone.`)) return;
     entries = entries.filter(x => x.vehicleId !== v.id); save(KEY, entries);
+    costs = costs.filter(c => c.vehicleId !== v.id); save(CKEY, costs);
     settings.vehicles = settings.vehicles.filter(x => x.id !== v.id);
     switchVehicle(settings.vehicles[0].id); tidyPhotos(); toast('Vehicle deleted');
   };
 
-  const download = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); };
+  const download = (name, data, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], { type })); a.download = name; a.click(); };
   async function backup() {
-    const name = `fuel-log-${today()}.json`, text = JSON.stringify({ settings, entries }, null, 1);
-    const file = new File([text], name, { type: 'application/json' });
+    const name = `fuel-log-${today()}.json`, text = JSON.stringify({ settings, entries, costs }, null, 1);
     // On phones, the share sheet lets you save straight to Google Drive, Files, email or WhatsApp.
-    if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: 'Fuel Log backup' }); }
-      catch (e) { if (e.name === 'AbortError') return false; download(name, text, 'application/json'); }
-    } else download(name, text, 'application/json');
+    if (await shareFile(new File([text], name, { type: 'application/json' }), 'Fuel Log backup') === 'aborted') return false;
     settings.lastBackup = today(); delete settings.backupSnooze; saveSettings();
     toast('Backup saved'); return true;
   }
@@ -1405,6 +1750,12 @@
       .concat(all.map(x => ['"' + vname(x.vehicleId).replace(/"/g, '""') + '"', x.date, x.odo, x.type, x.litres, x.price, x.total, x.before ?? '', x.after ?? '', x.full, !!x.missed, isBudi(x), x.rangeBefore ?? '', x.rangeAfter ?? '',
         legsAll[x.id]?.km ?? '', legsAll[x.id] ? legsAll[x.id].kmpl.toFixed(2) : '', '"' + (x.station || '').replace(/"/g, '""') + '"']));
     download(`fuel-log-${today()}.csv`, rows.map(r => r.join(',')).join('\n'), 'text/csv');
+    if (costs.length) setTimeout(() => {
+      const q = t => '"' + String(t ?? '').replace(/"/g, '""') + '"';
+      const cr = [['vehicle', 'date', 'category', 'amount_rm', 'odometer_km', 'note']].concat([...costs].sort((a, b) => a.date.localeCompare(b.date))
+        .map(c => [q(vname(c.vehicleId)), c.date, catName(c.cat), c.amount, c.odo ?? '', q(c.note)]));
+      download(`car-costs-${today()}.csv`, cr.map(r => r.join(',')).join('\n'), 'text/csv');
+    }, 600);
   };
   $('#impJson').onchange = async e => {
     const f = e.target.files[0]; e.target.value = ''; if (!f) return;
@@ -1419,11 +1770,16 @@
         saveSettings();
       }
       entries = entries.concat(add); save(KEY, entries); adoptOrphans(); await tidyPhotos();
+      if (Array.isArray(d.costs)) {
+        const have = new Set(costs.map(c => c.id)), vs = new Set(settings.vehicles.map(v => v.id));
+        costs = costs.concat(d.costs.filter(c => c && c.id && c.date && !have.has(c.id)).map(c => vs.has(c.vehicleId) ? c : { ...c, vehicleId: settings.current }));
+        save(CKEY, costs);
+      }
       renderSettings(); renderTitle();
       toast(`Imported ${add.length} fill-up(s)`);
     } catch { toast('That file is not a Fuel Log backup'); }
   };
-  $('#wipe').onclick = () => { if (confirm('Delete ALL fill-ups and receipt photos? This cannot be undone.')) { entries = []; save(KEY, entries); idb.clear().catch(() => {}); toast('All data deleted'); } };
+  $('#wipe').onclick = () => { if (confirm('Delete ALL fill-ups, car costs and receipt photos? This cannot be undone.')) { entries = []; save(KEY, entries); costs = []; save(CKEY, costs); idb.clear().catch(() => {}); toast('All data deleted'); } };
   function loadDemo() {
     const base = new Date(); base.setMonth(base.getMonth() - 5); let odo = 42000;
     for (let i = 0; i < 14; i++) {
@@ -1436,7 +1792,17 @@
       odo += Math.round(380 + Math.sin(i) * 60);
     }
     if (!veh().tank) { veh().tank = '40'; saveSettings(); }
-    save(KEY, entries); toast('Sample data added');
+    const ago = n => { const d = new Date(); d.setDate(d.getDate() - n); return localISO(d); }, lastOdo = odo;
+    [['service', 285, 120, 'Minor service, 5W-30'], ['roadtax', 90, 140, ''], ['insurance', 1180, 140, 'Renewal'], ['tyres', 640, 60, '2 front tyres'],
+     ['toll', 45.6, 30, ''], ['parking', 32, 12, ''], ['toll', 38.2, 5, '']].forEach(([cat, amount, n, note], i) =>
+      costs.push({ id: 'cdemo' + i + Date.now(), vehicleId: settings.current, date: ago(n), cat, amount, odo: cat === 'service' || cat === 'tyres' ? Math.round(lastOdo - n * 35) : null, note, done: [] }));
+    if (!veh().reminders?.length) {
+      veh().reminders = [
+        { id: 'rdemo1', name: 'Oil change', km: 5000, months: 6, lastDate: ago(120), lastKm: Math.round(lastOdo - 4600), cat: 'service' },
+        { id: 'rdemo2', name: 'Road tax', months: 12, lastDate: ago(140), lastKm: null, cat: 'roadtax' }];
+      saveSettings();
+    }
+    save(CKEY, costs); save(KEY, entries); toast('Sample data added');
   }
   $('#loadDemo').onclick = () => { if (entries.length && !confirm('Add sample fill-ups to your existing data?')) return; loadDemo(); go('home'); };
   $('#demoBtn').onclick = () => { loadDemo(); renderHome(); };
