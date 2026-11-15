@@ -33,7 +33,7 @@ No sign-up, no server, no ads. Everything stays on your phone.
 - One chart with tabs: **Spending** per month, **Price per litre** trend, **km/L** per fill-up.
 
 **Car costs and service reminders**
-- Log **service, tyres, repair, insurance, road tax, toll, parking** and other costs from **+ Car cost** on Home or the **Car costs** tab in History.
+- Log **service, tyres, repair, insurance, road tax, toll, parking, TNG reloads** and other costs from **+ Car cost** on Home or the **Car costs** tab in History.
 - **Service reminders** per vehicle (Settings): every so many km and/or months, whichever comes first. Quick picks for oil change, road tax, insurance, tyre rotation, battery and brake check. The current odometer is estimated from your fill-ups and how much you usually drive.
 - Logging a cost can tick off a reminder (e.g. a Service cost marks the oil change done).
 
@@ -60,9 +60,15 @@ km/L = distance on the odometer ÷ fuel used. If you skipped logging a fill-up, 
 
 The **range and next fill-up** estimates use, in order of preference: the range you entered with **Update**, the dashboard range you logged after the last fill, or the gauge level × tank × your recent km/L. Distance driven since then comes from the odometer you entered, or from how far you usually drive per day. Next fill-up is when you'd reach the range you usually refill at. They are estimates; your car's dashboard is the real reading.
 
-## BUDI95 (Malaysia)
+## Made for Malaysia
 
-Under BUDI95, eligible Malaysians pay **RM 1.99/L for RON95** up to a monthly quota (**300 L** from 1 Sep 2026; e-hailing drivers get 800 L). Above the quota you pay the unsubsidised price, which changes weekly. Set these under **Settings → BUDI95 subsidy**: whether you get it, your quota, the subsidised price and the current unsubsidised price. The quota is per person, so the app counts fill-ups across all your vehicles. Receipts that mention BUDI or SUBSIDI are tagged automatically when scanned.
+**BUDI95.** Eligible Malaysians pay **RM 1.99/L for RON95** up to a monthly quota (**300 L** from 1 Sep 2026; e-hailing drivers get 800 L). Above the quota you pay the unsubsidised price, which changes weekly. Set it up under **Settings → BUDI95 subsidy**. The quota is per person, so the app counts fill-ups across all your vehicles. Home warns you when you have about one fill of quota left, and when it's used up. Receipts that mention BUDI or SUBSIDI are tagged automatically when scanned.
+
+**Weekly pump prices.** When you're online, the app checks the official weekly prices on [data.gov.my](https://data.gov.my/data-catalogue/fuelprice) (RON95, RON95 BUDI95, RON97, diesel) and uses them to fill in RM/litre and the unsubsidised RON95 price. You can see them under **Settings → Pump prices**. Only the price list is downloaded; nothing about you is sent.
+
+**Touch 'n Go.** Log TNG reloads as a car cost if that's easier than logging each toll and parking.
+
+**Bahasa Melayu.** Switch the language under **Settings → Display → Language**. Phones set to Malay open in Bahasa Melayu.
 
 ## Install on your phone
 

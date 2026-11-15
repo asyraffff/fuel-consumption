@@ -244,7 +244,7 @@
 
   /* car costs + reminders */
   .sheet { padding: 14px 14px 18px; display: grid; gap: 12px; }
-  .pills.cats { grid-template-columns: repeat(4, 1fr); }
+  .pills.cats { grid-template-columns: repeat(3, 1fr); }
   .pills.cats button { min-height: 40px; font-size: 13.5px; }
   .addcost { width: 100%; border: 1.5px dashed var(--accent); color: var(--accent); background: transparent; font-weight: 600; padding: 12px; margin-bottom: 14px; border-radius: 12px; }
   .minifoot { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
@@ -462,6 +462,11 @@
       <div id="remList"></div>
     </div>
     <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Pump prices</h2><button id="refreshPrices" class="link">Refresh</button></div>
+      <div class="mini" id="priceGrid"></div>
+      <div class="hint" id="priceSrc" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:4px"><h2 style="margin:0">BUDI95 subsidy</h2>
         <label class="check" style="margin:0"><input id="s-budiOn" type="checkbox"> I get BUDI95</label></div>
       <div id="budiFields">
@@ -469,7 +474,7 @@
           <div><label for="s-budiQuota">Monthly quota (L)</label><input id="s-budiQuota" type="number" inputmode="numeric" min="0" step="10"></div>
           <div><label for="s-budiPrice">BUDI95 price (RM/L)</label><input id="s-budiPrice" type="number" inputmode="decimal" min="0" step="0.01"></div>
           <div class="span2"><label for="s-marketPrice">RON95 without subsidy (RM/L)</label><input id="s-marketPrice" type="number" inputmode="decimal" min="0" step="0.01">
-            <div class="hint">Changes weekly. Only used to show how much the subsidy saves you.</div></div>
+            <div class="hint">Updated every week from the pump prices above. Used when you're over the quota and to show how much BUDI95 saves you.</div></div>
         </div>
         <div class="hint" style="margin-top:10px">The quota is per person, so it's shared by all your vehicles. E-hailing drivers get 800 L.</div>
       </div>
@@ -483,6 +488,9 @@
       <span class="lbl" id="unitLbl">Show consumption as</span>
       <div class="tabs" role="radiogroup" aria-labelledby="unitLbl" id="unitTabs" style="grid-template-columns:1fr 1fr;margin:0">
         <button type="button" role="radio" data-u="kmpl">km/L</button><button type="button" role="radio" data-u="l100">L/100 km</button></div>
+      <span class="lbl" id="langLbl" style="margin-top:14px">Language</span>
+      <div class="tabs" role="radiogroup" aria-labelledby="langLbl" id="langTabs" style="grid-template-columns:1fr 1fr;margin:0">
+        <button type="button" role="radio" data-l="en" lang="en">English</button><button type="button" role="radio" data-l="ms" lang="ms">Bahasa Melayu</button></div>
     </div>
     <div class="card">
       <h2>Data</h2>
@@ -523,7 +531,7 @@
     <div class="bar"><strong id="costTitle">Add car cost</strong><button type="button" onclick="this.closest('dialog').close()">Close</button></div>
     <div class="sheet">
       <input type="hidden" id="k-id"><input type="hidden" id="k-cat" value="service">
-      <div class="pills cats" role="radiogroup" aria-label="Type of cost" id="catPills"></div>
+      <div><div class="pills cats" role="radiogroup" aria-label="Type of cost" id="catPills"></div><div class="hint" id="catHint" hidden>Counts as toll and parking. Log either your reloads or each toll and parking, not both.</div></div>
       <div class="grid2">
         <div><label for="k-amount">Amount (RM)</label><input id="k-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
         <div><label for="k-date">Date</label><input id="k-date" type="date"></div>
@@ -576,6 +584,179 @@
   let costs = load(CKEY, []); // other car costs: { id, vehicleId, date, cat, amount, odo, note, done: [reminder ids] }
   let settings = Object.assign({ unit: 'kmpl', period: 'all', theme: 'auto' }, load(SKEY, {}));
   const saveSettings = () => save(SKEY, settings);
+
+  /* ---------- language: English or Bahasa Melayu ----------
+     The app is written in English. In Malay mode every piece of text the app puts on screen is translated as it appears:
+     exact phrases first, then patterns for text with numbers and dates in it. Dates use the Malay locale directly. */
+  const LANG = settings.lang || (/^ms\b/i.test(navigator.language || '') ? 'ms' : 'en');
+  const LOC = LANG === 'ms' ? 'ms-MY' : 'en-MY';
+  document.documentElement.lang = LANG;
+  const MS = {
+    '(optional)': '(pilihan)', '+ Add': '+ Tambah', '+ Add car cost': '+ Tambah kos kereta', '+ Add vehicle': '+ Tambah kenderaan', '+ Car cost': '+ Kos kereta',
+    '3 months': '3 bulan', 'Add car cost': 'Tambah kos kereta', 'Edit car cost': 'Ubah kos kereta', 'All': 'Semua', 'All-in per km': 'Kos penuh per km',
+    'Also mark as done': 'Tandakan juga sebagai selesai', 'Amount (RM)': 'Jumlah (RM)', 'Avg consumption': 'Purata penggunaan',
+    'BUDI95 price (RM/L)': 'Harga BUDI95 (RM/L)', 'BUDI95 subsidy': 'Subsidi BUDI95', 'Back up': 'Sandarkan', 'Battery': 'Bateri', 'Brake check': 'Periksa brek',
+    'Car costs': 'Kos kereta', 'Close': 'Tutup', 'Coming up': 'Akan datang', 'Consumption': 'Penggunaan',
+    "Count the gaps between the marks on your dashboard's fuel gauge, from 0 to 1.": 'Kira ruang antara tanda pada meter minyak di papan pemuka, dari 0 hingga 1.',
+    'Counts as toll and parking. Log either your reloads or each toll and parking, not both.': 'Dikira sebagai tol dan parkir. Rekod sama ada tambah nilai, atau setiap tol dan parkir, bukan kedua-duanya.',
+    'Date': 'Tarikh', 'Day': 'Siang', 'Day / night mode': 'Mod siang / malam', 'Delete': 'Padam', 'Delete all data': 'Padam semua data',
+    'Delete this vehicle': 'Padam kenderaan ini', 'Display': 'Paparan', 'Done': 'Selesai', 'Edit reminder': 'Ubah peringatan', 'Editing': 'Kenderaan',
+    'Every (km)': 'Setiap (km)', 'Everything is saved on this device only. Export a backup now and then (receipt photos are not included).':
+      'Semua data disimpan di peranti ini sahaja. Eksport sandaran sekali-sekala (gambar resit tidak termasuk).',
+    'Export CSV': 'Eksport CSV', 'Export backup': 'Eksport sandaran', 'Fill any two, the third is worked out.': 'Isi mana-mana dua, yang ketiga dikira sendiri.',
+    'Fuel': 'Minyak', 'Fuel gauge after': 'Meter minyak selepas', 'Fuel gauge before': 'Meter minyak sebelum',
+    'Fuel gauge steps, empty to full': 'Bilangan langkah meter minyak, kosong ke penuh', 'Fuel per km': 'Minyak per km', 'Fuel spent': 'Belanja minyak',
+    'Full': 'Penuh', 'Empty': 'Kosong', 'History': 'Sejarah', 'Home': 'Utama', 'I get BUDI95': 'Saya layak BUDI95',
+    'I missed logging the fill-up before this one': 'Saya terlepas merekod isian sebelum ini', 'Import backup': 'Import sandaran', 'Insurance': 'Insurans',
+    'Last done': 'Kali terakhir dibuat', 'Later': 'Nanti', 'Leaves this stretch out of the consumption average.': 'Jarak ini tidak dikira dalam purata penggunaan.',
+    'Litres': 'Liter', "Log each time you isi minyak. After two fill-ups you'll see your fuel consumption and cost per km.":
+      'Rekod setiap kali anda isi minyak. Selepas dua isian, anda boleh lihat penggunaan minyak dan kos per km.',
+    'Log your first fill-up': 'Rekod isian pertama', 'Manage vehicles': 'Urus kenderaan', 'Month': 'Bulan', 'Monthly budget (RM)': 'Bajet bulanan (RM)',
+    'Monthly quota (L)': 'Kuota bulanan (L)', 'More': 'Lagi', 'My car': 'Kereta saya', 'Name': 'Nama', 'New reminder': 'Peringatan baharu',
+    'Next fill': 'Isi seterusnya', 'Night': 'Malam', 'No fill-ups yet': 'Belum ada isian', 'Not recorded': 'Tidak direkod', 'Note': 'Nota',
+    'Odometer now (km)': 'Odometer sekarang (km)', 'Oil change': 'Tukar minyak hitam', 'Other': 'Lain-lain', 'Parking': 'Parkir',
+    'Per fill-up · dashed line is your average': 'Setiap isian · garis putus ialah purata anda', 'Price / L': 'Harga / L', 'Pump prices': 'Harga pam',
+    'RM / litre': 'RM / liter', 'RM spent per month': 'RM dibelanjakan sebulan', 'RON95 without subsidy (RM/L)': 'RON95 tanpa subsidi (RM/L)',
+    'Range now (km)': 'Jarak sekarang (km)', 'Range on dashboard': 'Jarak pada papan pemuka', 'Receipt': 'Resit', 'Refresh': 'Muat semula', 'Repair': 'Pembaikan',
+    'Road tax': 'Cukai jalan', 'Sample data': 'Data contoh', 'Sample data added': 'Data contoh ditambah', 'Sample': 'Contoh', 'Save': 'Simpan',
+    'Scan receipt': 'Imbas resit', 'Scan again': 'Imbas semula', 'Service': 'Servis', 'Service reminders': 'Peringatan servis', 'Settings': 'Tetapan',
+    'Share report': 'Kongsi laporan', 'Show consumption as': 'Tunjuk penggunaan sebagai', 'Spending': 'Perbelanjaan', 'Station / note': 'Stesen / nota',
+    'TNG reload': 'Tambah nilai TNG', 'Tank capacity (L)': 'Kapasiti tangki (L)',
+    'Tank capacity lets the app use your gauge readings (so partial fills still count) and estimate the range left.':
+      'Dengan kapasiti tangki, apl boleh guna bacaan meter (jadi isian separa tetap dikira) dan anggar baki jarak.',
+    'Tap a fill-up to edit · swipe left to delete': 'Ketik isian untuk ubah · leret ke kiri untuk padam',
+    'Tap the mark your fuel needle points to, same as on your dashboard.': 'Ketik tanda yang ditunjuk jarum minyak, sama seperti di papan pemuka.',
+    'Tap to edit · swipe left to delete': 'Ketik untuk ubah · leret ke kiri untuk padam', 'Text read from receipt': 'Teks yang dibaca daripada resit',
+    'The km figure beside your fuel gauge. Used to tell you how far you can still go.': 'Angka km di sebelah meter minyak. Untuk beritahu berapa jauh lagi anda boleh pergi.',
+    "The quota is per person, so it's shared by all your vehicles. E-hailing drivers get 800 L.": 'Kuota ialah untuk setiap orang, jadi dikongsi oleh semua kenderaan anda. Pemandu e-hailing dapat 800 L.',
+    'Toll': 'Tol', 'Total RM': 'Jumlah RM', 'Tyre rotation': 'Putaran tayar', 'Tyres': 'Tayar', 'Update': 'Kemas kini',
+    "Updated every week from the pump prices above. Used when you're over the quota and to show how much BUDI95 saves you.":
+      'Dikemas kini setiap minggu daripada harga pam di atas. Digunakan apabila anda melebihi kuota dan untuk tunjuk penjimatan BUDI95.',
+    'Vehicle': 'Kenderaan', 'What': 'Apa', 'What does your dashboard show?': 'Apa yang papan pemuka tunjukkan?',
+    'Whichever comes first. Leave "last done" blank to start counting from today.': 'Mana-mana yang dahulu. Biarkan "kali terakhir" kosong untuk mula kira dari hari ini.',
+    'Year': 'Tahun', 'are only on this phone. Save a backup in case you change phones.': 'hanya ada di telefon ini. Simpan sandaran sekiranya anda tukar telefon.',
+    'at odometer (km)': 'pada odometer (km)', 'fuel + car costs': 'minyak + kos kereta', 'km left': 'km lagi', 'km left · fill up soon': 'km lagi · isi segera',
+    'or every (months)': 'atau setiap (bulan)', 'or try it with sample data': 'atau cuba dengan data contoh', 'price, RM': 'harga, RM', 'Language': 'Bahasa',
+    'Official weekly prices from data.gov.my for the week of': 'Harga rasmi mingguan daripada data.gov.my untuk minggu',
+    // attributes
+    'After, km': 'Selepas, km', 'Before, km': 'Sebelum, km', 'BUDI95 quota used this month': 'Kuota BUDI95 digunakan bulan ini', 'Back': 'Kembali', 'Chart': 'Carta',
+    'Choose vehicle': 'Pilih kenderaan', 'Common reminders': 'Peringatan biasa', 'Consumption per fill-up': 'Penggunaan setiap isian',
+    'Dashboard range after filling, in km': 'Jarak di papan pemuka selepas isi, dalam km', 'Dashboard range before filling, in km': 'Jarak di papan pemuka sebelum isi, dalam km',
+    'Day / night': 'Siang / malam', 'Day or night mode': 'Mod siang atau malam', 'Dismiss': 'Tutup', 'Main': 'Utama', 'Period': 'Tempoh',
+    'Price per litre': 'Harga seliter', 'Recent stations': 'Stesen terkini', 'Spent per month': 'Belanja sebulan', 'Switch to day mode': 'Tukar ke mod siang',
+    'Switch to night mode': 'Tukar ke mod malam', 'The km beside the fuel gauge': 'Km di sebelah meter minyak', 'Type of cost': 'Jenis kos',
+    'Update the range from your dashboard': 'Kemas kini jarak dari papan pemuka', 'View receipt': 'Lihat resit', 'Edit fill-up': 'Ubah isian',
+    'Empty, 0': 'Kosong, 0', 'Full, 1': 'Penuh, 1', 'e.g. Oil change': 'cth. Tukar minyak hitam', 'e.g. 5W-30, filter': 'cth. 5W-30, penapis', 'History tabs': 'Tab sejarah',
+    // messages
+    'Could not save: storage full or blocked': 'Tidak dapat simpan: storan penuh atau disekat', 'Receipt photo not found': 'Gambar resit tidak dijumpai',
+    'after missed fill-up': 'selepas isian terlepas', 'Save changes': 'Simpan perubahan', 'Receipt saved. Scan again to replace it.': 'Resit disimpan. Imbas semula untuk menggantikannya.',
+    'Enter two of: total, litres, RM/litre': 'Masukkan dua daripada: jumlah, liter, RM/liter', 'Enter the odometer reading': 'Masukkan bacaan odometer',
+    'Receipt photo could not be stored': 'Gambar resit tidak dapat disimpan', 'Fill-up updated': 'Isian dikemas kini', 'Fill-up deleted': 'Isian dipadam',
+    'Saved. Consumption restarts from this fill-up.': 'Disimpan. Penggunaan dikira semula mulai isian ini.',
+    'Saved your first fill-up. Consumption shows after the next one.': 'Isian pertama disimpan. Penggunaan dipaparkan selepas isian seterusnya.',
+    'Saved. Not enough readings for a consumption figure this time.': 'Disimpan. Bacaan tidak cukup untuk kira penggunaan kali ini.',
+    'Saved. Consumption shows after your next full-tank fill-up.': 'Disimpan. Penggunaan dipaparkan selepas isian tangki penuh seterusnya.',
+    'Saved. This tank:': 'Disimpan. Tangki ini:', 'than your average.': 'berbanding purata anda.',
+    'Receipt reader not loaded (offline?). Photo kept, type the values in.': 'Pembaca resit tidak dimuatkan (luar talian?). Gambar disimpan, sila taip nilainya.',
+    'Reading receipt…': 'Membaca resit…', 'Could not read this receipt. Type the values in.': 'Resit ini tidak dapat dibaca. Sila taip nilainya.',
+    'No amounts found. Type them in.': 'Tiada jumlah dijumpai. Sila taip.', 'After 2 full tanks': 'Selepas 2 tangki penuh',
+    'No fill-ups in this period.': 'Tiada isian dalam tempoh ini.', 'Not enough fill-ups in this period yet.': 'Belum cukup isian dalam tempoh ini.',
+    'Enter the amount': 'Masukkan jumlah', 'Cost updated': 'Kos dikemas kini', 'Cost deleted': 'Kos dipadam', 'No car costs yet': 'Belum ada kos kereta',
+    'Add when it was last done': 'Tambah bila kali terakhir dibuat', 'Add cost': 'Tambah kos',
+    'Get a heads-up before the oil change, road tax or insurance is due.': 'Dapatkan peringatan sebelum tiba masa tukar minyak hitam, cukai jalan atau insurans.',
+    'Give the reminder a name': 'Beri nama peringatan', 'Set every how many km or months': 'Tetapkan setiap berapa km atau bulan',
+    'Reminder updated': 'Peringatan dikemas kini', 'Reminder added': 'Peringatan ditambah', 'Reminder deleted': 'Peringatan dipadam',
+    'Prices are up to date': 'Harga sudah terkini', 'Prices update automatically from data.gov.my when you are online.': 'Harga dikemas kini secara automatik daripada data.gov.my apabila anda dalam talian.',
+    "You're offline": 'Anda di luar talian', "Couldn't reach data.gov.my. Try again later.": 'Tidak dapat menghubungi data.gov.my. Cuba lagi nanti.',
+    'All time': 'Sepanjang masa', 'Nothing logged in this period': 'Tiada rekod dalam tempoh ini', 'Cost per km': 'Kos per km', 'BUDI95 saved': 'Jimat BUDI95',
+    'total spent': 'jumlah belanja', 'Per month': 'Setiap bulan', 'Report saved as an image': 'Laporan disimpan sebagai gambar', 'Fuel Log report': 'Laporan Fuel Log',
+    'Car costs ': 'Kos kereta', 'Enter the range or the odometer': 'Masukkan jarak atau odometer', 'Range updated': 'Jarak dikemas kini',
+    'Nothing logged yet': 'Belum ada rekod', 'Your fill-ups will appear here, grouped by month.': 'Isian anda akan dipaparkan di sini, mengikut bulan.',
+    'Log a fill-up': 'Rekod isian', 'after missed': 'selepas terlepas', 'partial': 'separa', 'Night mode': 'Mod malam', 'Day mode': 'Mod siang',
+    'Vehicle added. Give it a name.': 'Kenderaan ditambah. Beri nama.', 'Vehicle deleted': 'Kenderaan dipadam', 'Backup saved': 'Sandaran disimpan',
+    'That file is not a Fuel Log backup': 'Fail itu bukan sandaran Fuel Log', 'All data deleted': 'Semua data dipadam',
+    'Delete ALL fill-ups, car costs and receipt photos? This cannot be undone.': 'Padam SEMUA isian, kos kereta dan gambar resit? Tindakan ini tidak boleh dibatalkan.',
+    'Add sample fill-ups to your existing data?': 'Tambah isian contoh kepada data sedia ada?', 'Undo': 'Batal', 'Not yet': 'Belum', 'Log it': 'Rekod',
+    "It's been": 'Sudah', 'since your last fill-up. Isi minyak and forgot to log it?': 'sejak isian terakhir. Dah isi minyak tapi lupa rekod?',
+    'By our estimate your tank is about empty. Isi minyak and forgot to log it?': 'Mengikut anggaran, tangki anda hampir kosong. Dah isi minyak tapi lupa rekod?',
+    'Last backup': 'Sandaran terakhir', '. Save a backup in case you change phones.': '. Simpan sandaran sekiranya anda tukar telefon.',
+    'due now': 'sekarang', 'no change': 'tiada perubahan', '· no change': '· tiada perubahan', 'fill-up': 'isian', 'Photo kept': 'Gambar disimpan',
+    'total': 'jumlah', 'litres': 'liter', 'price': 'harga', 'date': 'tarikh',
+    'Distance': 'Jarak', 'Next Add when it was last done': 'Seterusnya: tambah bila kali terakhir dibuat', 'Consumption ': 'Penggunaan',
+  };
+  const tw = w => MS[w] ?? w;
+  // Patterns for text with numbers, dates or names in it. Applied in order to whatever didn't match exactly.
+  const RULES = [
+    [/^Last fill-up: (.+) km \((.+)\)$/, 'Isian terakhir: $1 km ($2)'],
+    [/^Lower than your last fill-up \((.+) km\)\. Check for a typo\.$/, 'Lebih rendah daripada isian terakhir ($1 km). Semak jika tersalah taip.'],
+    [/^\+(.+) km since last fill-up\. That's a lot, check for a typo\.$/, '+$1 km sejak isian terakhir. Banyak tu, semak jika tersalah taip.'],
+    [/^\+(.+) km since your last fill-up$/, '+$1 km sejak isian terakhir'],
+    [/^Only (.+) L of quota left this month$/, 'Hanya $1 L kuota tinggal bulan ini'],
+    [/^(.+) L of (.+) L quota left this month$/, '$1 L daripada $2 L kuota tinggal bulan ini'],
+    [/^Odometer (.+) is not higher than the previous fill-up \((.+)\)\. Save anyway\?$/, 'Odometer $1 tidak lebih tinggi daripada isian sebelumnya ($2). Simpan juga?'],
+    [/^Odometer is lower than your last fill-up \((.+) km\)$/, 'Odometer lebih rendah daripada isian terakhir ($1 km)'],
+    [/^over (.+) km, same as your average\.$/, 'untuk $1 km, sama seperti purata anda.'],
+    [/^over (.+) km(,?)$/, 'untuk $1 km$2'], [/^over (.+) km\.$/, 'untuk $1 km.'],
+    [/^(\d+)% better$/, '$1% lebih baik'], [/^(\d+)% worse$/, '$1% lebih teruk'],
+    [/^Found (.+)\. Check them, then add the odometer\.$/, (m, a) => `Dijumpai ${a.split(', ').map(tw).join(', ')}. Semak, kemudian tambah odometer.`],
+    [/^No fill-ups for (.+) yet$/, 'Belum ada isian untuk $1'],
+    [/^Quota used up · RM (.+)$/, 'Kuota habis · RM $1'],
+    [/^(.+) L left · about (\d+) fills?$/, '$1 L lagi · kira-kira $2 kali isi'],
+    [/^(.+) L left · not a full tank$/, '$1 L lagi · tak cukup setangki'],
+    [/^saved ≈ RM (.+)$/, 'jimat ≈ RM $1'],
+    [/^RM (.+) last month$/, 'RM $1 bulan lepas'], [/^Last tank /, 'Tangki lepas '], [/^Spent in /, 'Belanja '],
+    [/^avg RM /, 'purata RM '], [/^best (.+) · worst (.+)$/, 'terbaik $1 · terburuk $2'],
+    [/^(\S+) now$/, '$1 sekarang'], [/^since (.+)$/, 'sejak $1'], [/^(\S+) price per litre$/, 'Harga seliter $1'],
+    [/^(\d+) of (\d+) marks$/, '$1 daripada $2 tanda'], [/^Estimated fuel left: about (\d+)%$/, 'Anggaran baki minyak: kira-kira $1%'],
+    [/^Edit (.+) on (.+)$/, (m, a, b) => `Ubah ${tw(a)} pada ${b}`],
+    [/^Add service, tyres, road tax, insurance, tolls and parking to see what (.+) really costs per km\.$/,
+      'Tambah servis, tayar, cukai jalan, insurans, tol dan parkir untuk lihat kos sebenar $1 per km.'],
+    [/^(.+) marked done$/, (m, a) => `${tw(a)} ditanda selesai`],
+    [/^(.+) (RM [\d,.]+) added$/, (m, a, b) => `${tw(a)} ${b} ditambah`],
+    [/^New prices for the week of (.+)$/, 'Harga baharu untuk minggu $1'],
+    [/^\. Checked (.+)\.$/, '. Disemak $1.'],
+    [/^Fuel Log report · (.+)$/, 'Laporan Fuel Log · $1'], [/^Last 3 months · to (.+)$/, '3 bulan lepas · hingga $1'],
+    [/^Made with Fuel Log · (.+)$/, 'Dibuat dengan Fuel Log · $1'],
+    [/^Delete "(.+)"(?: and its (\d+) fill-ups?)?\? This cannot be undone\.$/, (m, a, n) => `Padam "${a}"${n ? ` dan ${n} isiannya` : ''}? Tindakan ini tidak boleh dibatalkan.`],
+    [/^Next /, 'Seterusnya '], [/^Filled /, 'Diisi '], [/^Checked dashboard /, 'Papan pemuka disemak '],
+    [/^· every ~(\d+) days$/, '· setiap ~$1 hari'], [/^· every /, '· setiap '],
+    [/\bin ([\d,]+) km\b/, 'dalam $1 km'], [/([\d,]+) km overdue/, 'lewat $1 km'], [/\bwas due /, 'sepatutnya '], [/\bdue today\b/, 'perlu hari ini'],
+    [/\bby (\d{1,2} \S+(?: \d{4})?)/, 'sebelum $1'], [/ or (\d)/g, ' atau $1'], [/\b(\d+) months?\b/g, '$1 bulan'],
+    [/\b(\d+) fill-ups?\b/g, '$1 isian'], [/\b(\d+) days ago\b/g, '$1 hari lalu'], [/^(\d+) days$/, '$1 hari'],
+    [/\byesterday\b/g, 'semalam'], [/\btoday\b/g, 'hari ini'], [/\bToday\b/g, 'Hari ini'], [/after missed fill-up/g, 'selepas isian terlepas'],
+    [/ all-in$/, ' termasuk semua'], [/^now ≈ /, 'sekarang ≈ '], [/^e\.g\. /, 'cth. '],
+  ];
+  function trMS(str) {
+    const core = str.trim(); if (!core || !/[A-Za-z]/.test(core)) return str;
+    let out = MS[core];
+    if (out == null) {
+      const icon = core.match(/^([^A-Za-z\d(+]+ )(.+)$/u); // "🔧 Service"
+      if (icon && MS[icon[2]] != null) out = icon[1] + MS[icon[2]];
+      else if (/^[A-Za-z' ]+(, [A-Za-z' ]+)+$/.test(core) && core.split(', ').every(w => MS[w] != null)) out = core.split(', ').map(tw).join(', ');
+      else { out = core; for (const [re, to] of RULES) out = out.replace(re, to); }
+    }
+    return out === core ? str : str.replace(core, () => out);
+  }
+  const T = t => LANG === 'ms' ? trMS(String(t)) : t;
+  if (LANG === 'ms') {
+    const ATTRS = ['placeholder', 'aria-label', 'title'];
+    const skip = n => n.parentElement?.closest('script, style, [lang="en"], [translate="no"]');
+    const doText = n => { if (skip(n)) return; const t = trMS(n.data); if (t !== n.data) n.data = t; };
+    const doEl = el => ATTRS.forEach(a => { const v = el.getAttribute?.(a); if (v) { const t = trMS(v); if (t !== v) el.setAttribute(a, t); } });
+    const walk = root => {
+      if (root.nodeType === 3) return doText(root);
+      if (root.nodeType !== 1) return;
+      doEl(root); root.querySelectorAll('[placeholder],[aria-label],[title]').forEach(doEl);
+      const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); while (w.nextNode()) doText(w.currentNode);
+    };
+    walk(document.body);
+    new MutationObserver(ms => ms.forEach(m => {
+      if (m.type === 'characterData') doText(m.target);
+      else if (m.type === 'attributes') doEl(m.target);
+      else m.addedNodes.forEach(walk);
+    })).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+    const ask = window.confirm.bind(window); window.confirm = m => ask(T(m));
+  }
   // BUDI95 (Malaysia): RON95 at RM1.99/L up to a monthly quota per person (300 L since 1 Sep 2026; e-hailing 800 L).
   settings.budi = Object.assign({ on: true, quota: 300, price: 1.99, market: 3.87 }, settings.budi || {});
   const newVehicle = (name, extra = {}) => ({ id: 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, tank: '', budget: '', lastType: 'RON95', lastStation: '', ...extra });
@@ -598,8 +779,8 @@
 
   const rm = n => 'RM ' + (n || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const num = (n, d = 1) => (n == null || !isFinite(n)) ? '–' : n.toLocaleString('en-MY', { minimumFractionDigits: d, maximumFractionDigits: d });
-  const fmtDate = s => new Date(s + 'T00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
-  const fmtDay = s => new Date(s + 'T00:00').toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short' });
+  const fmtDate = s => new Date(s + 'T00:00').toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' });
+  const fmtDay = s => new Date(s + 'T00:00').toLocaleDateString(LOC, { weekday: 'short', day: 'numeric', month: 'short' });
   const localISO = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
   const today = () => localISO(new Date());
   const daysAgo = s => { const n = Math.round((new Date(today() + 'T00:00') - new Date(s + 'T00:00')) / 864e5); return n <= 0 ? 'today' : n === 1 ? 'yesterday' : n + ' days ago'; };
@@ -805,13 +986,18 @@
   const lastPriceOf = type => entries.filter(x => x.type === type && x.price > 0 && !(type === 'RON95' && isBudi(x)))
     .sort((a, b) => b.date.localeCompare(a.date))[0]?.price;
   // Put a sensible RM/litre in for the chosen fuel: BUDI95 price while there's quota, otherwise what you paid last time.
+  // This week's pump price from data.gov.my, if we have a recent one
+  const officialPrice = type => {
+    const pr = settings.prices; if (!pr || daysSince(pr.date) > 21) return null;
+    return { RON95: pr.ron95, RON97: pr.ron97, Diesel: pr.diesel }[type] || null;
+  };
   function prefillPrice() {
     const type = F('type').value, budiOk = settings.budi.on && type === 'RON95';
     let p = null;
     F('budi').checked = false;
     if (budiOk && budiLeft((F('date').value || today()).slice(0, 7), F('id').value) > 0) { p = budiPrice(); F('budi').checked = true; }
     else if (budiOk && +settings.budi.market) p = +settings.budi.market;
-    else p = lastPriceOf(type) || null;
+    else p = officialPrice(type) || lastPriceOf(type) || null;
     if (!p) {
       // No price known for this fuel: clear it, and whatever was worked out from the old price.
       if (!F('price').value) return;
@@ -1092,7 +1278,7 @@
     const monthEntries = s.filter(x => x.date.startsWith(mk));
     const spent = monthEntries.reduce((a, x) => a + x.total, 0), lastMonth = s.filter(x => x.date.startsWith(pmk)).reduce((a, x) => a + x.total, 0);
     const n = monthEntries.length;
-    $('#heroMonthLabel').textContent = 'Spent in ' + now.toLocaleDateString('en-MY', { month: 'short' });
+    $('#heroMonthLabel').textContent = 'Spent in ' + now.toLocaleDateString(LOC, { month: 'short' });
     $('#heroSpent').innerHTML = '<small>RM</small> ' + num(spent, 2);
     $('#heroSpentSub').textContent = lastMonth ? `RM ${num(lastMonth, 0)} last month` : `${n} fill-up${n === 1 ? '' : 's'}`;
     const avg = avgOf(L), [ev, eu] = effParts(avg);
@@ -1118,13 +1304,20 @@
 
     renderNudge(s, nf); renderDue();
 
-    // BUDI95 quota: per person, so counted across every vehicle
+    // BUDI95 quota: per person, so counted across every vehicle. Warn before the pump when about one fill is left.
+    const quotaNote = (left, saved) => {
+      if (!(+settings.budi.quota)) return '';
+      if (left <= 0.5) return `<b class="bad">Quota used up · RM ${num(+settings.budi.market, 2)}/L</b>`;
+      const fills = entries.filter(isBudi).slice(-5).map(x => x.litres).sort((a, b) => a - b), typical = fills[Math.floor(fills.length / 2)] || 30;
+      if (left < typical * 1.5) { const n = Math.floor(left / typical); return `<b class="warnt">${num(left, 0)} L left · ${n >= 1 ? `about ${n} fill${n > 1 ? 's' : ''}` : 'not a full tank'}</b>`; }
+      return saved >= 1 ? `saved ≈ RM ${num(saved, 0)}` : '';
+    };
     const qEl = $('#budiLine');
     if (settings.budi.on && entries.some(isBudi)) {
       const quota = +settings.budi.quota || 0, used = budiUsed(mk), pct = quota ? Math.min(100, used / quota * 100) : 0;
       const saved = used * Math.max(0, (+settings.budi.market || 0) - budiPrice());
       qEl.innerHTML = `<div class="bar budi-bar ${pct >= 100 ? 'over' : pct >= 85 ? 'pace' : ''}" role="progressbar" aria-valuenow="${Math.round(used)}" aria-valuemin="0" aria-valuemax="${quota}" aria-label="BUDI95 quota used this month"><div style="width:${pct}%"></div></div>
-        <div class="row2"><span>BUDI95 ${num(used, 0)} / ${num(quota, 0)} L</span><span>${saved >= 1 ? `saved ≈ RM ${num(saved, 0)}` : ''}</span></div>`;
+        <div class="row2"><span>BUDI95 ${num(used, 0)} / ${num(quota, 0)} L</span><span>${quotaNote(quota - used, saved)}</span></div>`;
     } else qEl.innerHTML = '';
 
     // period overview
@@ -1152,7 +1345,7 @@
     const c = settings.chart || 'spend', box = $('#chart'), W = Math.max(260, box.clientWidth || 300);
     $('#effTab').textContent = settings.unit === 'l100' ? 'L/100km' : 'km/L';
     $$('#chartTabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.c === c));
-    const dLabel = d => new Date(d + 'T00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+    const dLabel = d => new Date(d + 'T00:00').toLocaleDateString(LOC, { day: 'numeric', month: 'short' });
     let note = '', html = '';
     if (c === 'spend') {
       const byMonth = {};
@@ -1160,7 +1353,7 @@
       const months = Object.keys(byMonth).sort().slice(-Math.min(12, Math.floor(W / 42)));
       note = 'RM spent per month';
       html = months.length ? barChart(months.map(m => ({
-        label: new Date(m + '-01T00:00').toLocaleDateString('en-MY', { month: 'short' }), value: byMonth[m], tip: rm(byMonth[m])
+        label: new Date(m + '-01T00:00').toLocaleDateString(LOC, { month: 'short' }), value: byMonth[m], tip: rm(byMonth[m])
       })), W) : '';
     } else if (c === 'price') {
       const ftype = last.type, pp = ps.filter(x => x.type === ftype && x.price > 0).slice(-24);
@@ -1184,7 +1377,7 @@
 
   /* ---------- car costs ---------- */
   const CATS = { service: ['🔧', 'Service'], tyres: ['🛞', 'Tyres'], repair: ['🔩', 'Repair'], insurance: ['🛡️', 'Insurance'],
-    roadtax: ['📄', 'Road tax'], toll: ['🛣️', 'Toll'], parking: ['🅿️', 'Parking'], other: ['🧾', 'Other'] };
+    roadtax: ['📄', 'Road tax'], toll: ['🛣️', 'Toll'], parking: ['🅿️', 'Parking'], tng: ['💳', 'TNG reload'], other: ['🧾', 'Other'] };
   const catName = c => (CATS[c] || CATS.other)[1], catIcon = c => (CATS[c] || CATS.other)[0];
   const myCosts = () => costs.filter(c => c.vehicleId === settings.current);
   const topCats = list => {
@@ -1222,6 +1415,7 @@
   function setCat(c) {
     $('#k-cat').value = c;
     $$('#catPills button').forEach(b => b.setAttribute('aria-checked', b.dataset.c === c));
+    $('#catHint').hidden = c !== 'tng';
     if (!remTouched) $$('#k-rems input').forEach(i => i.checked = (veh().reminders || []).find(r => r.id === i.dataset.rem)?.cat === c);
   }
   $('#catPills').onclick = e => { const b = e.target.closest('button'); if (b) setCat(b.dataset.c); };
@@ -1281,7 +1475,7 @@
     const groups = [];
     list.forEach(c => { const k = c.date.slice(0, 7); (groups.at(-1)?.k === k ? groups.at(-1) : (groups.push({ k, items: [] }), groups.at(-1))).items.push(c); });
     $('#historyList').innerHTML = add + groups.map(g => {
-      const name = new Date(g.k + '-01T00:00').toLocaleDateString('en-MY', { month: 'long', year: 'numeric' });
+      const name = new Date(g.k + '-01T00:00').toLocaleDateString(LOC, { month: 'long', year: 'numeric' });
       return `<div class="month"><div class="mh"><b>${name}</b><span>${rm(g.items.reduce((a, c) => a + c.amount, 0))}</span></div><div class="list">` +
         g.items.map(c => `<div class="swipe" data-id="${c.id}"><button class="del" tabindex="-1">Delete</button>
           <div class="front" role="button" tabindex="0" aria-label="Edit ${catName(c.cat)} on ${fmtDate(c.date)}">
@@ -1301,7 +1495,7 @@
     { name: 'Battery', months: 24, cat: 'repair' },
     { name: 'Brake check', km: 20000, cat: 'service' },
   ];
-  const shortDate = d => new Date(d + 'T00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short', ...(d.slice(0, 4) !== today().slice(0, 4) ? { year: 'numeric' } : {}) });
+  const shortDate = d => new Date(d + 'T00:00').toLocaleDateString(LOC, { day: 'numeric', month: 'short', ...(d.slice(0, 4) !== today().slice(0, 4) ? { year: 'numeric' } : {}) });
   function remStatus(r) {
     const now = odoNow(), pace = paceOf(sorted());
     let kmLeft = null, daysLeft = null, dueDate = null;
@@ -1375,6 +1569,37 @@
     toast('Reminder deleted', 'Undo', () => { v.reminders.push(r); saveSettings(); renderRems(); });
   };
 
+  /* ---------- weekly pump prices from data.gov.my (official, public, no user data sent) ---------- */
+  const PRICE_API = 'https://api.data.gov.my/data-catalogue/?id=fuelprice&filter=level@series_type&sort=-date&limit=1';
+  async function updatePrices(force) {
+    const pr = settings.prices;
+    if (!force && pr?.checked && Date.now() - pr.checked < 6 * 36e5) return;
+    if (!navigator.onLine) { if (force) toast("You're offline"); return; }
+    try {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
+      const d = (await (await fetch(PRICE_API, { signal: ctl.signal })).json())?.[0]; clearTimeout(t);
+      if (!d?.date || !(d.ron95 > 0)) throw new Error('bad data');
+      const isNew = !pr || d.date > pr.date;
+      settings.prices = { date: d.date, ron95: d.ron95, ron97: d.ron97, diesel: d.diesel, dieselEast: d.diesel_eastmsia, budi95: d.ron95_budi95, checked: Date.now() };
+      if (isNew) { settings.budi.market = d.ron95; if (d.ron95_budi95 > 0) settings.budi.price = d.ron95_budi95; }
+      saveSettings();
+      if (view === 'settings') renderSettings();
+      if (view === 'home') renderHome();
+      if (force) toast(isNew ? 'New prices for the week of ' + shortDate(d.date) : 'Prices are up to date');
+    } catch { if (force) toast("Couldn't reach data.gov.my. Try again later."); }
+  }
+  function renderPrices() {
+    const pr = settings.prices, f = v => v > 0 ? 'RM ' + num(v, 2) : '–';
+    $('#priceGrid').innerHTML = [
+      ['RON95 BUDI95', f(pr?.budi95 ?? settings.budi.price)], ['RON95', f(pr?.ron95 ?? settings.budi.market)],
+      ['RON97', f(pr?.ron97)], ['Diesel', f(pr?.diesel) + (pr?.dieselEast && pr.dieselEast !== pr.diesel ? ` <small class="opt">(Sabah/Sarawak RM ${num(pr.dieselEast, 2)})</small>` : '')]
+    ].map(([k, v]) => `<div><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+    $('#priceSrc').innerHTML = pr ? `Official weekly prices from data.gov.my for the week of <b>${shortDate(pr.date)}</b>. Checked ${daysAgo(localISO(new Date(pr.checked)))}.`
+      : 'Prices update automatically from data.gov.my when you are online.';
+  }
+  $('#refreshPrices').onclick = () => updatePrices(true);
+  addEventListener('online', () => updatePrices());
+
   /* ---------- shareable report (PNG) for the period picked on Home ---------- */
   async function shareFile(file, title) {
     if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
@@ -1392,7 +1617,7 @@
     const months = {}; ps.forEach(x => { const k = x.date.slice(0, 7); months[k] = months[k] || [0, 0]; months[k][0] += x.total; });
     pc.forEach(c => { const k = c.date.slice(0, 7); months[k] = months[k] || [0, 0]; months[k][1] += c.amount; });
     const dates = ps.map(x => x.date).concat(pc.map(c => c.date)).sort(), now = new Date();
-    const label = p === 'month' ? now.toLocaleDateString('en-MY', { month: 'long', year: 'numeric' })
+    const label = p === 'month' ? now.toLocaleDateString(LOC, { month: 'long', year: 'numeric' })
       : p === '3m' ? 'Last 3 months · to ' + fmtDate(today()) : p === 'year' ? String(now.getFullYear())
       : dates.length ? fmtDate(dates[0]) + ' – ' + fmtDate(dates.at(-1)) : 'All time';
     return { ps, pc, fuel, litres, other, km, avg, saved, byCat, months, label };
@@ -1411,6 +1636,7 @@
     const mk = Object.keys(d.months).sort().slice(-12), showBars = mk.length >= 2;
     const H = 330 + rows.reduce((t, r) => t + (r[2] ? 126 : 92), 0) + 40 + (stats.length ? stats.length * 74 + 66 : 0) + (showBars ? 380 : 0) + 120;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+    if (LANG === 'ms') { const ft = g.fillText.bind(g); g.fillText = (t, x, y) => ft(T(t), x, y); }
     const C = { bg: '#eef2f0', card: '#ffffff', text: '#111827', muted: '#6b7280', line: '#e5e7eb', accent: '#0f766e', other: '#d97706' };
     const font = (w, sz) => g.font = `${w} ${sz}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
     g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
@@ -1440,7 +1666,7 @@
         const [f, o] = d.months[k], x = P + i * bw + bw * 0.18, w = bw * 0.64, hf = f / max * 210, ho = o / max * 210;
         g.fillStyle = C.accent; g.fillRect(x, base - hf, w, hf); g.fillStyle = C.other; g.fillRect(x, base - hf - ho, w, ho);
         g.fillStyle = C.muted; font(500, 24); g.textAlign = 'center';
-        g.fillText(new Date(k + '-01T00:00').toLocaleDateString('en-MY', { month: 'short' }), x + w / 2, base + 36); g.textAlign = 'left';
+        g.fillText(new Date(k + '-01T00:00').toLocaleDateString(LOC, { month: 'short' }), x + w / 2, base + 36); g.textAlign = 'left';
       });
       y = base + 40;
     }
@@ -1514,7 +1740,7 @@
     const when = days => {
       if (days <= 0.5) return '<b>due now</b>';
       const d = new Date(); d.setDate(d.getDate() + Math.round(days));
-      return '<b>' + d.toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short' }) + '</b>';
+      return '<b>' + d.toLocaleDateString(LOC, { weekday: 'short', day: 'numeric', month: 'short' }) + '</b>';
     };
     if (left != null) return { left, level, checked: chk?.date, low: left < 60, when: kmPerDay ? when((left - reserve) / kmPerDay) : '' };
 
@@ -1612,7 +1838,7 @@
     s.forEach(x => { const k = x.date.slice(0, 7); (groups.at(-1)?.k === k ? groups.at(-1) : (groups.push({ k, items: [] }), groups.at(-1))).items.push(x); });
     $('#historyList').innerHTML = groups.map(g => {
       const tot = g.items.reduce((a, x) => a + x.total, 0), lit = g.items.reduce((a, x) => a + x.litres, 0);
-      const name = new Date(g.k + '-01T00:00').toLocaleDateString('en-MY', { month: 'long', year: 'numeric' });
+      const name = new Date(g.k + '-01T00:00').toLocaleDateString(LOC, { month: 'long', year: 'numeric' });
       return `<div class="month"><div class="mh"><b>${name}</b><span>${rm(tot)} · ${num(lit, 0)} L</span></div><div class="list">` +
         g.items.map(x => {
           const leg = L[x.id], tags = [];
@@ -1705,7 +1931,8 @@
     $('#s-name').value = v.name; $('#s-tank').value = v.tank; $('#s-budget').value = v.budget; $('#s-steps').value = String(steps());
     $('#delVeh').hidden = settings.vehicles.length < 2;
     $$('#unitTabs button').forEach(b => b.setAttribute('aria-checked', b.dataset.u === settings.unit));
-    renderRems();
+    $$('#langTabs button').forEach(b => b.setAttribute('aria-checked', b.dataset.l === LANG));
+    renderRems(); renderPrices();
     $('#s-budiOn').checked = settings.budi.on; $('#budiFields').hidden = !settings.budi.on;
     $('#s-budiQuota').value = settings.budi.quota; $('#s-budiPrice').value = settings.budi.price; $('#s-marketPrice').value = settings.budi.market;
   }
@@ -1718,6 +1945,7 @@
     $('#' + id).oninput = () => { settings.budi[k] = +$('#' + id).value || 0; saveSettings(); });
   $('#s-steps').onchange = () => { veh().gaugeSteps = +$('#s-steps').value; saveSettings(); buildMeters(); };
   $('#unitTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; settings.unit = b.dataset.u; saveSettings(); $$('#unitTabs button').forEach(x => x.setAttribute('aria-checked', x === b)); };
+  $('#langTabs').onclick = e => { const b = e.target.closest('button'); if (!b || b.dataset.l === LANG) return; settings.lang = b.dataset.l; saveSettings(); location.reload(); };
   $('#addVeh').onclick = () => {
     const v = newVehicle('Vehicle ' + (settings.vehicles.length + 1));
     settings.vehicles.push(v); switchVehicle(v.id);
@@ -1818,6 +2046,7 @@
     if (action === 'range' && mine().length) $('#rangeUpd')?.click();
   }
   tidyPhotos();
+  updatePrices();
   if ('serviceWorker' in navigator && location.protocol.startsWith('http'))
     navigator.serviceWorker.register('sw.js').catch(e => console.warn('offline mode unavailable', e));
 })();
