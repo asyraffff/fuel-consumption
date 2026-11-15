@@ -12,7 +12,8 @@ No sign-up, no server, no ads. Everything stays on your phone.
 
 **Logging a fill-up**
 - 📷 **Scan the receipt.** Reads the total (RM), litres, price per litre, fuel type and date. You check the values before saving.
-- Fill in any two of *total / litres / RM per litre* and the third is worked out.
+- Fill in any two of *total / litres / RM per litre* and the third is worked out. **RM per litre is filled in for you**: the BUDI95 price while you have quota, otherwise the last price you paid for that fuel, so usually typing the total is enough.
+- **Fuel type** is a row of buttons (RON95 · RON97 · RON100 · Diesel · Other), and your **recent stations** are one tap away.
 - **Odometer** with a "+420 km since your last fill-up" hint and a warning for likely typos.
 - **Fuel gauge before and after.** The picker shows the same marks as your dashboard's fuel gauge (8 steps from 0 to 1 by default; set the number of steps per vehicle in Settings). Tap the mark the needle points to.
 - **BUDI95 toggle** for RON95: fills in the subsidised price (RM 1.99/L) and shows how much of your monthly quota is left. Untick it when you're over the quota and it switches to the unsubsidised price.
@@ -21,6 +22,7 @@ No sign-up, no server, no ads. Everything stays on your phone.
 - After saving you get one line on how that tank did, e.g. *"14.0 km/L, 19% better than your average."*
 
 **Home**
+- **Reminders** at the top, one at a time: if it's been much longer than usual since your last fill-up (or the estimate says your tank should be empty), it asks whether you forgot to log one; and once you have 5+ fill-ups it reminds you to back up every 30 days.
 - **Spent this month** with an optional **monthly budget** bar. The bar turns orange when you're on pace to go over and red once you have.
 - **Average consumption** (km/L or L/100 km).
 - **BUDI95 quota bar**: litres used out of your monthly quota (shared across all your vehicles) and roughly how much the subsidy saved you.
@@ -36,7 +38,8 @@ No sign-up, no server, no ads. Everything stays on your phone.
 - **Multiple vehicles** (car, motorbike…), each with its own tank size, budget and history. Switch from the top bar.
 - **Day / night mode**: follows your phone, or set it yourself with the 🌙/☀️ button. Night mode is modelled on a car's instrument cluster at night.
 - **Works offline** and installs to your home screen like a normal app.
-- Export a **backup (JSON)** or **CSV**, and import a backup on another phone.
+- Export a **backup (JSON)** or **CSV**, and import a backup on another phone. On a phone, Back up opens the share sheet so you can save it straight to Google Drive, Files or WhatsApp.
+- **Home-screen shortcuts** (Android): long-press the app icon for **Isi minyak** or **Update range**.
 
 ## How consumption is worked out
 

@@ -112,6 +112,14 @@
     padding: 12px 14px; margin-bottom: 14px; }
   .note .x { margin: -8px -8px -8px auto; border: 0; background: none; color: var(--muted); width: 40px; height: 40px; padding: 0; font-size: 20px; line-height: 1; flex: none; }
   .note b { color: var(--accent); }
+  .note.nudge { flex-wrap: wrap; align-items: center; }
+  .note.nudge .msg { flex: 1 1 200px; font-size: 14px; }
+  .note.nudge .acts { display: flex; gap: 8px; margin-left: auto; }
+  .note.nudge .acts button { min-height: 40px; padding: 8px 14px; font-size: 14px; }
+  .note.nudge .acts .later { border: 0; background: none; color: var(--muted); }
+  .recent { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .recent button { min-height: 36px; padding: 6px 12px; border-radius: 999px; font-size: 13.5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
   .hero { display: grid; grid-template-columns: 1fr 1fr; padding: 0; overflow: hidden; }
   .hero .col { padding: 16px 16px 12px; min-width: 0; }
   .hero .col + .col { border-left: 1px solid var(--line); }
@@ -288,6 +296,7 @@
 <main>
   <!-- HOME -->
   <section id="view-home">
+    <div class="note nudge" id="homeNote" hidden></div>
     <div class="note" id="savedNote" hidden><div id="savedText"></div><button class="x" aria-label="Dismiss" onclick="this.parentElement.hidden=true">×</button></div>
 
     <div class="card empty" id="emptyState" hidden>
@@ -390,7 +399,8 @@
               <button type="button" role="radio" data-v="RON95">RON95</button><button type="button" role="radio" data-v="RON97">RON97</button><button type="button" role="radio" data-v="RON100">RON100</button><button type="button" role="radio" data-v="Diesel">Diesel</button><button type="button" role="radio" data-v="Other">Other</button>
             </div></div>
           <div><label for="f-date">Date</label><input id="f-date" type="date"></div>
-          <div><label for="f-station">Station / note</label><input id="f-station" type="text" placeholder="Petronas Jalan Ampang"></div>
+          <div><label for="f-station">Station / note</label><input id="f-station" type="text" placeholder="e.g. Petronas Jalan Ampang" autocomplete="off">
+            <div class="recent" id="stationPills" role="group" aria-label="Recent stations"></div></div>
           <label class="check"><input id="f-missed" type="checkbox"><span>I missed logging the fill-up before this one<span class="hint" style="display:block">Leaves this stretch out of the consumption average.</span></span></label>
         </div>
       </details>
@@ -721,20 +731,57 @@
   }
   ['date', 'type', 'station', 'missed'].forEach(k => F(k).addEventListener(k === 'station' ? 'input' : 'change', () => { moreSummary(); if (k === 'date') odoHint(); }));
 
+  // Last price paid for a fuel type (any vehicle, since pump prices are the same), newest first.
+  const lastPriceOf = type => entries.filter(x => x.type === type && x.price > 0 && !(type === 'RON95' && isBudi(x)))
+    .sort((a, b) => b.date.localeCompare(a.date))[0]?.price;
+  // Put a sensible RM/litre in for the chosen fuel: BUDI95 price while there's quota, otherwise what you paid last time.
+  function prefillPrice() {
+    const type = F('type').value, budiOk = settings.budi.on && type === 'RON95';
+    let p = null;
+    F('budi').checked = false;
+    if (budiOk && budiLeft((F('date').value || today()).slice(0, 7), F('id').value) > 0) { p = budiPrice(); F('budi').checked = true; }
+    else if (budiOk && +settings.budi.market) p = +settings.budi.market;
+    else p = lastPriceOf(type) || null;
+    if (!p) {
+      // No price known for this fuel: clear it, and whatever was worked out from the old price.
+      if (!F('price').value) return;
+      const computed = ['total', 'litres', 'price'].find(x => !lastEdited.includes(x));
+      if (lastEdited.length === 2 && computed !== 'price') F(computed).value = '';
+      F('price').value = ''; lastEdited = lastEdited.filter(k => k !== 'price');
+      return;
+    }
+    F('price').value = (+p).toFixed(2);
+    if (F('total').value || F('litres').value) F('price').dispatchEvent(new Event('input', { bubbles: true }));
+    else lastEdited = ['price'];
+  }
+  F('type').addEventListener('change', () => { if (!F('id').value) prefillPrice(); updateBudiRow(); });
+
+  // Recent stations as one-tap pills under the station field
+  function renderStations() {
+    const seen = new Set(), list = [];
+    [...entries].sort((a, b) => b.date.localeCompare(a.date)).forEach(x => {
+      const n = (x.station || '').trim(), k = n.toLowerCase();
+      if (n && !seen.has(k) && list.length < 4) { seen.add(k); list.push(n); }
+    });
+    const cur = F('station').value.trim().toLowerCase();
+    $('#stationPills').innerHTML = list.map(n => `<button type="button" aria-pressed="${n.toLowerCase() === cur}">${esc(n)}</button>`).join('');
+    $('#stationPills').hidden = !list.length;
+  }
+  $('#stationPills').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    F('station').value = b.textContent; F('station').dispatchEvent(new Event('input'));
+  };
+  F('station').addEventListener('input', renderStations);
+
   function resetForm() {
     $('#entryForm').reset();
     F('id').value = ''; F('date').value = today(); F('missed').checked = false;
     F('type').value = veh().lastType || 'RON95'; F('station').value = veh().lastStation || '';
     gauge.before = null; gauge.after = 100; buildMeters();
     lastEdited = []; pendingThumb = null;
-    F('budi').checked = false;
-    // Start with the BUDI95 price for RON95 when there's quota left, so typing the total is enough.
-    if (settings.budi.on && F('type').value === 'RON95') {
-      const hasQuota = budiLeft(today().slice(0, 7)) > 0, p = hasQuota ? budiPrice() : +settings.budi.market;
-      if (p) { F('price').value = p.toFixed(2); lastEdited = ['price']; }
-      F('budi').checked = hasQuota;
-    }
-    updateBudiRow();
+    // Start with the right price for the fuel, so typing the total is enough.
+    prefillPrice();
+    updateBudiRow(); renderStations();
     $('#scanRes').hidden = true; $('#ocrRawWrap').hidden = true; $('#ocrStatus').textContent = ''; $('#scanLabel').textContent = 'Scan receipt';
     $('#delBtn').hidden = true; $('#saveBtn').textContent = 'Save'; $('#more').open = false;
     odoHint(); moreSummary();
@@ -747,7 +794,7 @@
     F('litres').value = x.litres; F('price').value = x.price; F('type').value = x.type;
     F('station').value = x.station || ''; F('missed').checked = !!x.missed;
     F('rangeBefore').value = x.rangeBefore ?? ''; F('rangeAfter').value = x.rangeAfter ?? '';
-    F('budi').checked = isBudi(x); lastEdited = []; updateBudiRow();
+    F('budi').checked = isBudi(x); lastEdited = []; updateBudiRow(); renderStations();
     setGauge('before', x.before ?? null); setGauge('after', x.after ?? (x.full ? 100 : null));
     $('#more').open = !!x.missed;
     $('#delBtn').hidden = false; $('#saveBtn').textContent = 'Save changes';
@@ -999,6 +1046,8 @@
       `<div>${nf?.checked ? `Checked dashboard ${daysAgo(nf.checked)}` : `Filled ${daysAgo(last.date)} · ${num(last.odo, 0)} km`}` +
       ' · <button class="link upd" id="rangeUpd" aria-label="Update the range from your dashboard">Update</button></div></div>';
 
+    renderNudge(s, nf);
+
     // BUDI95 quota: per person, so counted across every vehicle
     const qEl = $('#budiLine');
     if (settings.budi.on && entries.some(isBudi)) {
@@ -1058,6 +1107,32 @@
   $('#chartTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; settings.chart = b.dataset.c; saveSettings(); renderHome(); };
   let lastW = innerWidth;
   addEventListener('resize', () => { if (Math.abs(innerWidth - lastW) > 20 && view === 'home') { lastW = innerWidth; renderHome(); } });
+
+  // One reminder at a time above the summary: a fill-up you may have forgotten to log, else a backup that's due.
+  const daysSince = d => Math.round((new Date(today() + 'T00:00') - new Date(d + 'T00:00')) / 864e5);
+  function renderNudge(s, nf) {
+    const el = $('#homeNote'), last = s.at(-1), since = daysSince(last.date);
+    const gaps = s.slice(-7).map((x, i, a) => i ? daysSince(a[i - 1].date) - daysSince(x.date) : null).filter(g => g > 0);
+    const every = gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 10;
+    let html = '';
+    const emptyByNow = nf?.left === 0 && !nf.checked && since >= 2;
+    if (veh().nudged !== last.id && (emptyByNow || since >= Math.max(7, Math.round(every * 1.6)))) {
+      html = `<div class="msg">${emptyByNow ? 'By our estimate your tank is about empty' : `It's been <b>${since} days</b> since your last fill-up`}. Isi minyak and forgot to log it?</div>
+        <div class="acts"><button class="later" data-nudge="fill">Not yet</button><button class="primary" data-go="add">Log it</button></div>`;
+    } else {
+      const total = entries.length, lb = settings.lastBackup, snooze = settings.backupSnooze;
+      const due = total >= 5 && (!lb || daysSince(lb) >= 30) && !(snooze && snooze > today());
+      if (due) html = `<div class="msg">${lb ? `Last backup <b>${daysAgo(lb)}</b>` : `<b>${total} fill-ups</b> are only on this phone`}. Save a backup in case you change phones.</div>
+        <div class="acts"><button class="later" data-nudge="backup">Later</button><button class="primary" id="nudgeBackup">Back up</button></div>`;
+    }
+    el.innerHTML = html; el.hidden = !html;
+  }
+  $('#homeNote').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.nudge === 'fill') { veh().nudged = sorted().at(-1)?.id; saveSettings(); $('#homeNote').hidden = true; }
+    if (b.dataset.nudge === 'backup') { const d = new Date(); d.setDate(d.getDate() + 7); settings.backupSnooze = localISO(d); saveSettings(); $('#homeNote').hidden = true; }
+    if (b.id === 'nudgeBackup') backup().then(ok => ok && renderHome());
+  });
 
   // Estimate fuel left and when the next fill-up is likely.
   // Best source first: a range you entered from the dashboard today, then the range shown after the last fill-up,
@@ -1309,7 +1384,18 @@
   };
 
   const download = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); };
-  $('#expJson').onclick = () => download(`fuel-log-${today()}.json`, JSON.stringify({ settings, entries }, null, 1), 'application/json');
+  async function backup() {
+    const name = `fuel-log-${today()}.json`, text = JSON.stringify({ settings, entries }, null, 1);
+    const file = new File([text], name, { type: 'application/json' });
+    // On phones, the share sheet lets you save straight to Google Drive, Files, email or WhatsApp.
+    if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'Fuel Log backup' }); }
+      catch (e) { if (e.name === 'AbortError') return false; download(name, text, 'application/json'); }
+    } else download(name, text, 'application/json');
+    settings.lastBackup = today(); delete settings.backupSnooze; saveSettings();
+    toast('Backup saved'); return true;
+  }
+  $('#expJson').onclick = () => backup().then(ok => ok && view === 'home' && renderHome());
   $('#expCsv').onclick = () => {
     const vname = id => settings.vehicles.find(v => v.id === id)?.name || '';
     const all = [...entries].sort((a, b) => vname(a.vehicleId).localeCompare(vname(b.vehicleId)) || a.date.localeCompare(b.date) || a.odo - b.odo);
@@ -1359,6 +1445,12 @@
   resetForm();
   renderTitle();
   renderHome();
+  const action = new URLSearchParams(location.search).get('do');
+  if (action) {
+    history.replaceState({ v: 'home', d: 0 }, '', location.pathname);
+    if (action === 'add') go('add');
+    if (action === 'range' && mine().length) $('#rangeUpd')?.click();
+  }
   tidyPhotos();
   if ('serviceWorker' in navigator && location.protocol.startsWith('http'))
     navigator.serviceWorker.register('sw.js').catch(e => console.warn('offline mode unavailable', e));
