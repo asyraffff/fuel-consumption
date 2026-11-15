@@ -134,6 +134,28 @@
   .savebar .primary { flex: 1; padding: 13px; font-size: 16px; }
   .field { margin-top: 14px; }
 
+  .span2 { grid-column: 1 / -1; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+  .bar > div { height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
+  .bar.pace > div { background: var(--warn); }
+  .bar.over > div { background: var(--danger); }
+  .bad { color: var(--danger); font-weight: 600; }
+  .warnt { color: var(--warn); font-weight: 600; }
+  .goodt { color: var(--good); font-weight: 600; }
+  .hero .foot .next { color: var(--text); margin-top: 3px; }
+  .hero .foot .next b { color: var(--accent); }
+  .vehbtn { border: 0; background: none; color: var(--text); font: inherit; font-size: 19px; font-weight: 700; padding: 4px 6px 4px 0;
+    display: flex; align-items: center; gap: 8px; cursor: pointer; max-width: 100%; }
+  .vehbtn svg { width: 18px; height: 18px; color: var(--muted); flex: none; }
+  .vehbtn img { width: 26px; height: 26px; border-radius: 7px; }
+  .top h1 .sub { font-size: 14px; color: var(--muted); font-weight: 500; }
+  #vehDlg { width: min(92vw, 380px); }
+  #vehList button { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; border-radius: 0;
+    border-bottom: 1px solid var(--line); padding: 14px; background: none; text-align: left; }
+  #vehList button span { color: var(--muted); font-size: 13px; }
+  #vehList button[aria-pressed="true"] { background: var(--accent-soft); }
+  #vehList button[aria-pressed="true"] b { color: var(--accent); }
+
   /* history */
   .month { margin-bottom: 16px; }
   .mh { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px 6px; }
@@ -185,7 +207,7 @@
 
     <div class="card empty" id="emptyState" hidden>
       <div class="big">⛽</div>
-      <h2>No fill-ups yet</h2>
+      <h2 id="emptyTitle">No fill-ups yet</h2>
       <p>Log each time you isi minyak. After two fill-ups you'll see your fuel consumption and cost per km.</p>
       <button class="primary" data-go="add" style="padding:12px 22px">Log your first fill-up</button>
       <div style="margin-top:12px"><button class="link" id="demoBtn">or try it with sample data</button></div>
@@ -193,7 +215,7 @@
 
     <div id="homeContent">
       <div class="card hero">
-        <div><div class="k" id="heroMonthLabel">Spent this month</div><div class="v" id="heroSpent"></div><div class="s" id="heroSpentSub"></div></div>
+        <div><div class="k" id="heroMonthLabel">Spent this month</div><div class="v" id="heroSpent"></div><div class="s" id="heroSpentSub"></div><div id="budget"></div></div>
         <div><div class="k">Average consumption</div><div class="v" id="heroEff"></div><div class="s" id="heroEffSub"></div></div>
         <div class="foot" id="heroFoot"></div>
       </div>
@@ -206,6 +228,7 @@
       </div>
 
       <div class="card"><h2>Spent per month</h2><div class="chart" id="chartSpend"></div></div>
+      <div class="card"><h2 id="priceTitle">Price per litre</h2><div class="hint" id="priceNote" style="margin:-6px 0 8px"></div><div class="chart" id="chartPrice"></div></div>
       <div class="card"><h2 id="effTitle">Consumption per fill-up</h2><div class="chart" id="chartEff"></div></div>
     </div>
   </section>
@@ -286,13 +309,20 @@
   <!-- SETTINGS -->
   <section id="view-settings" hidden>
     <div class="card">
-      <h2>Vehicle</h2>
+      <div class="row" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Vehicle</h2><button id="addVeh" class="link">+ Add vehicle</button></div>
+      <div id="s-vehRow" style="margin-bottom:12px"><label for="s-veh">Editing</label><select id="s-veh"></select></div>
       <div class="grid2">
-        <div><label for="s-tank">Tank capacity (L)</label><input id="s-tank" type="number" step="0.5" min="0" placeholder="e.g. 40"></div>
-        <div><label for="s-unit">Show consumption as</label>
-          <select id="s-unit"><option value="kmpl">km/L</option><option value="l100">L/100 km</option></select></div>
+        <div class="span2"><label for="s-name">Name</label><input id="s-name" type="text" maxlength="40" placeholder="e.g. Myvi"></div>
+        <div><label for="s-tank">Tank capacity (L)</label><input id="s-tank" type="number" inputmode="decimal" step="0.5" min="0" placeholder="e.g. 40"></div>
+        <div><label for="s-budget">Monthly budget (RM)</label><input id="s-budget" type="number" inputmode="decimal" step="10" min="0" placeholder="e.g. 300"></div>
       </div>
-      <div class="hint">With tank capacity set, the before/after gauge readings are used to work out fuel used between fill-ups, so partial fills still give a consumption figure.</div>
+      <div class="hint">Tank capacity lets the app use your gauge readings (so partial fills still count) and estimate the range left.</div>
+      <button id="delVeh" class="danger" style="margin-top:12px">Delete this vehicle</button>
+    </div>
+    <div class="card">
+      <h2>Display</h2>
+      <label for="s-unit">Show consumption as</label>
+      <select id="s-unit"><option value="kmpl">km/L</option><option value="l100">L/100 km</option></select>
     </div>
     <div class="card">
       <h2>Data</h2>
@@ -318,6 +348,11 @@
 </nav>
 
 <div class="toast" id="toast" role="status"></div>
+<dialog id="vehDlg" aria-label="Choose vehicle">
+  <div class="bar"><strong>Vehicle</strong><button type="button" onclick="this.closest('dialog').close()">Close</button></div>
+  <div id="vehList"></div>
+  <div style="padding:8px 14px 14px"><button type="button" class="link" id="vehManage">Manage vehicles</button></div>
+</dialog>
 <dialog id="receiptDlg">
   <div class="bar"><strong id="receiptDlgTitle">Receipt</strong><button type="button" id="receiptDlgClose">Close</button></div>
   <img id="receiptDlgImg" alt="Receipt photo">
@@ -332,8 +367,24 @@
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { toast('Could not save: storage full or blocked'); } };
 
   let entries = load(KEY, []);
-  let settings = Object.assign({ tank: '', unit: 'kmpl', period: 'all', lastType: 'RON95', lastStation: '' }, load(SKEY, {}));
+  let settings = Object.assign({ unit: 'kmpl', period: 'all' }, load(SKEY, {}));
   const saveSettings = () => save(SKEY, settings);
+  const newVehicle = (name, extra = {}) => ({ id: 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, tank: '', budget: '', lastType: 'RON95', lastStation: '', ...extra });
+  // Older versions had one vehicle with settings at the top level: turn that into the first vehicle.
+  if (!Array.isArray(settings.vehicles) || !settings.vehicles.length) {
+    const v = newVehicle('My car', { tank: settings.tank || '', lastType: settings.lastType || 'RON95', lastStation: settings.lastStation || '' });
+    settings.vehicles = [v]; settings.current = v.id;
+  }
+  delete settings.tank; delete settings.lastType; delete settings.lastStation;
+  if (!settings.vehicles.some(v => v.id === settings.current)) settings.current = settings.vehicles[0].id;
+  const veh = () => settings.vehicles.find(v => v.id === settings.current);
+  const mine = () => entries.filter(x => x.vehicleId === settings.current);
+  function adoptOrphans() { // entries without a known vehicle go to the current one
+    let changed = false;
+    entries.forEach(x => { if (!settings.vehicles.some(v => v.id === x.vehicleId)) { x.vehicleId = settings.current; changed = true; } });
+    if (changed) save(KEY, entries);
+  }
+  adoptOrphans(); saveSettings();
   let pendingThumb = null;
 
   const rm = n => 'RM ' + (n || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -395,13 +446,38 @@
     document.body.classList.toggle('adding', v === 'add');
     const sub = v === 'add' || v === 'settings';
     $('#backBtn').hidden = !sub; $('#gearBtn').hidden = sub;
-    $('#topTitle').innerHTML = v === 'add' ? ($('#f-id').value ? 'Edit fill-up' : 'Isi minyak') : v === 'settings' ? 'Settings'
-      : '<img src="icons/icon-192.png" alt="">Fuel Log';
+    renderTitle();
     if (v === 'home') renderHome();
     if (v === 'history') renderHistory();
+    if (v === 'settings') renderSettings();
     if (push) history.pushState({ v }, '');
     window.scrollTo(0, 0);
   }
+  function renderTitle() {
+    const multi = settings.vehicles.length > 1;
+    $('#topTitle').innerHTML = view === 'add' ? ($('#f-id').value ? 'Edit fill-up' : 'Isi minyak' + (multi ? ` <small class="sub">· ${esc(veh().name)}</small>` : ''))
+      : view === 'settings' ? 'Settings'
+      : multi ? `<button class="vehbtn" id="vehBtn" aria-haspopup="dialog"><img src="icons/icon-192.png" alt="">${esc(veh().name)}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>`
+      : '<img src="icons/icon-192.png" alt="">Fuel Log';
+  }
+  function switchVehicle(id) {
+    settings.current = id; saveSettings(); resetForm(); $('#savedNote').hidden = true;
+    renderTitle(); if (view === 'home') renderHome(); if (view === 'history') renderHistory(); if (view === 'settings') renderSettings();
+  }
+  const vehDlg = $('#vehDlg');
+  document.addEventListener('click', e => {
+    if (e.target.closest('#vehBtn')) {
+      $('#vehList').innerHTML = settings.vehicles.map(v => {
+        const n = entries.filter(x => x.vehicleId === v.id).length;
+        return `<button type="button" data-veh="${v.id}" aria-pressed="${v.id === settings.current}"><b>${esc(v.name)}</b><span>${n} fill-up${n === 1 ? '' : 's'}</span></button>`;
+      }).join('');
+      vehDlg.showModal();
+    }
+    const vb = e.target.closest('[data-veh]');
+    if (vb) { vehDlg.close(); switchVehicle(vb.dataset.veh); }
+  });
+  vehDlg.onclick = e => { if (e.target === vehDlg) vehDlg.close(); };
+  $('#vehManage').onclick = () => { vehDlg.close(); go('settings'); };
   window.addEventListener('popstate', e => go(e.state?.v || 'home', false));
   history.replaceState({ v: 'home' }, '');
   document.addEventListener('click', e => {
@@ -441,7 +517,7 @@
     if (target === 'price' && t && l) F('price').value = (t / l).toFixed(3);
   }));
 
-  const sorted = () => [...entries].sort((a, b) => a.date.localeCompare(b.date) || a.odo - b.odo);
+  const sorted = () => mine().sort((a, b) => a.date.localeCompare(b.date) || a.odo - b.odo);
   const prevOf = (date, id) => sorted().filter(x => x.id !== id && x.date <= date).at(-1);
 
   function odoHint() {
@@ -467,7 +543,7 @@
   function resetForm() {
     $('#entryForm').reset();
     F('id').value = ''; F('date').value = today(); F('missed').checked = false;
-    F('type').value = settings.lastType || 'RON95'; F('station').value = settings.lastStation || '';
+    F('type').value = veh().lastType || 'RON95'; F('station').value = veh().lastStation || '';
     setGauge('before', null); setGauge('after', 100);
     lastEdited = []; pendingThumb = null;
     $('#scanRes').hidden = true; $('#ocrRawWrap').hidden = true; $('#ocrStatus').textContent = ''; $('#scanLabel').textContent = 'Scan receipt';
@@ -507,7 +583,7 @@
     const entry = {
       id, date: F('date').value || today(), odo, total: t, litres: l, price: p, type: F('type').value,
       before: gauge.before, after: gauge.after, full: gauge.after === 100, missed: F('missed').checked,
-      station: F('station').value.trim(), hasReceipt: !!old?.hasReceipt
+      station: F('station').value.trim(), hasReceipt: !!old?.hasReceipt, vehicleId: old?.vehicleId || settings.current
     };
     const prev = prevOf(entry.date, id);
     if (prev && odo <= prev.odo && !confirm(`Odometer ${odo} is not higher than the previous fill-up (${prev.odo}). Save anyway?`)) return;
@@ -517,7 +593,8 @@
     }
     entries = entries.filter(x => x.id !== id).concat(entry);
     save(KEY, entries);
-    settings.lastType = entry.type; settings.lastStation = entry.station; saveSettings();
+    const v = settings.vehicles.find(v => v.id === entry.vehicleId);
+    if (v) { v.lastType = entry.type; v.lastStation = entry.station; saveSettings(); }
     if (old) { history.back(); toast('Fill-up updated'); return; }
     showSavedNote(entry);
     history.replaceState({ v: 'home' }, ''); view = 'add'; go('home', false);
@@ -535,8 +612,8 @@
       }
       html = `Saved. This tank: <b>${effText(leg.kmpl)}</b> over ${num(leg.km, 0)} km${cmp}.`;
     } else if (entry.missed) html = 'Saved. Consumption restarts from this fill-up.';
-    else if (!entries.some(x => x.id !== entry.id)) html = 'Saved your first fill-up. Consumption shows after the next one.';
-    else html = entry.full || settings.tank ? 'Saved. Not enough readings for a consumption figure this time.'
+    else if (!mine().some(x => x.id !== entry.id)) html = 'Saved your first fill-up. Consumption shows after the next one.';
+    else html = entry.full || veh().tank ? 'Saved. Not enough readings for a consumption figure this time.'
       : 'Saved. Consumption shows after your next full-tank fill-up.';
     $('#savedText').innerHTML = html; $('#savedNote').hidden = false;
   }
@@ -656,7 +733,7 @@
   // Full-to-full: when cur is a full fill, fuel used = litres added since the last full fill.
   // "Missed the one before" breaks the chain: no figure for it, counting restarts there.
   function legs() {
-    const s = sorted(), tank = +settings.tank || 0, out = [];
+    const s = sorted(), tank = +veh().tank || 0, out = [];
     let lastFull = null, litresSinceFull = 0;
     s.forEach((cur, i) => {
       const prev = s[i - 1];
@@ -691,8 +768,9 @@
   /* ---------- home ---------- */
   $('#periodChips').onclick = e => { const b = e.target.closest('button'); if (!b) return; settings.period = b.dataset.p; saveSettings(); renderHome(); };
   function renderHome() {
-    const has = entries.length > 0;
+    const has = mine().length > 0;
     $('#emptyState').hidden = has; $('#homeContent').hidden = !has;
+    $('#emptyTitle').textContent = settings.vehicles.length > 1 ? `No fill-ups for ${veh().name} yet` : 'No fill-ups yet';
     if (!has) return;
     const s = sorted(), L = legs(), now = new Date();
     const mk = today().slice(0, 7), pm = new Date(now.getFullYear(), now.getMonth() - 1, 1), pmk = localISO(pm).slice(0, 7);
@@ -705,7 +783,20 @@
     $('#heroEff').innerHTML = avg ? `${ev} <small>${eu}</small>` : '–';
     $('#heroEffSub').textContent = L.length ? 'Last tank: ' + effText(L.at(-1).kmpl) : 'Needs 2 full-tank fill-ups';
     const last = s.at(-1);
-    $('#heroFoot').textContent = `Last isi minyak ${daysAgo(last.date)} · ${num(last.odo, 0)} km · ${rm(last.total)}`;
+    const nf = nextFill(s, L);
+    $('#heroFoot').innerHTML = `Last isi minyak ${daysAgo(last.date)} · ${num(last.odo, 0)} km · ${rm(last.total)}` +
+      (nf ? `<div class="next">${nf}</div>` : '');
+
+    // monthly budget
+    const budget = +veh().budget || 0, bEl = $('#budget');
+    if (budget) {
+      const day = now.getDate(), dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const pace = day >= 5 ? spent / day * dim : null, pct = Math.min(100, spent / budget * 100);
+      const over = spent > budget, warn = !over && pace && pace > budget * 1.05;
+      bEl.innerHTML = `<div class="bar ${over ? 'over' : warn ? 'pace' : ''}" role="progressbar" aria-valuenow="${Math.round(spent)}" aria-valuemin="0" aria-valuemax="${budget}" aria-label="Monthly budget used"><div style="width:${pct}%"></div></div>
+        <div class="s">${over ? `<b class="bad">RM ${num(spent - budget, 2)} over</b> budget of RM ${num(budget, 0)}`
+          : `RM ${num(budget - spent, 2)} left of RM ${num(budget, 0)}`}${warn ? ` · <b class="warnt">on pace for RM ${num(pace, 0)}</b>` : ''}</div>`;
+    } else bEl.innerHTML = '<button class="link" id="setBudget" style="font-size:12.5px;margin-top:4px">Set a monthly budget</button>';
 
     // period overview
     const p = settings.period;
@@ -737,6 +828,52 @@
       label: new Date(x.date + 'T00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }),
       value: settings.unit === 'l100' ? 100 / x.kmpl : x.kmpl
     }))) : '<div class="hint">Shows after two fill-ups with odometer readings.</div>';
+
+    // price per litre trend (latest fuel type only, so RON95 and RON97 don't mix)
+    const ftype = last.type, pp = ps.filter(x => x.type === ftype && x.price > 0).slice(-24);
+    $('#priceTitle').textContent = `Price per litre (${ftype})`;
+    if (pp.length >= 2) {
+      const first = pp[0].price, latest = pp.at(-1).price, avgP = pp.reduce((a, x) => a + x.price, 0) / pp.length;
+      const ch = (latest / first - 1) * 100;
+      $('#priceNote').innerHTML = `Latest <b>RM ${num(latest, 2)}</b> · avg RM ${num(avgP, 2)} · ` +
+        (Math.abs(ch) < 0.5 ? 'no change' : `<b class="${ch > 0 ? 'bad' : 'goodt'}">${ch > 0 ? '▲' : '▼'} ${num(Math.abs(ch), 1)}%</b>`) + ' since ' + fmtDate(pp[0].date);
+      $('#chartPrice').innerHTML = lineChart(pp.map(x => ({
+        label: new Date(x.date + 'T00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }), value: x.price
+      })), 2, 'Price per litre');
+    } else {
+      $('#priceNote').textContent = '';
+      $('#chartPrice').innerHTML = '<div class="hint">Shows after two fill-ups of the same fuel in this period.</div>';
+    }
+  }
+
+  // Estimate fuel left and when the next fill-up is likely, from driving pace and the usual refill level.
+  function nextFill(s, L) {
+    if (s.length < 2) return '';
+    const last = s.at(-1), tank = +veh().tank || 0;
+    const recent = s.filter(x => (new Date(last.date) - new Date(x.date)) / 864e5 <= 120);
+    const pool = recent.length >= 2 ? recent : s.slice(-2);
+    const spanDays = Math.max(1, (new Date(last.date) - new Date(pool[0].date)) / 864e5);
+    const kmPerDay = (last.odo - pool[0].odo) / spanDays;
+    const daysSince = Math.max(0, Math.round((new Date(today() + 'T00:00') - new Date(last.date + 'T00:00')) / 864e5));
+    const when = days => {
+      if (days <= 0.5) return '<b>due now</b>';
+      const d = new Date(); d.setDate(d.getDate() + Math.round(days));
+      return 'around <b>' + d.toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short' }) + '</b>';
+    };
+    const avg = avgOf(L.slice(-5));
+    if (tank && avg && last.after != null && kmPerDay > 0) {
+      const befores = s.map(x => x.before).filter(v => v != null).sort((a, b) => a - b);
+      const refillAt = befores.length ? befores[Math.floor(befores.length / 2)] : 15; // usual gauge level when you refill
+      const kmSince = kmPerDay * daysSince;
+      const left = Math.max(0, last.after / 100 * tank * avg - kmSince);
+      const toRefill = (last.after - refillAt) / 100 * tank * avg - kmSince;
+      return `≈ <b>${num(left, 0)} km</b> left in the tank · next isi minyak ${when(toRefill / kmPerDay)}`;
+    }
+    // No tank size: fall back to how often you usually fill up.
+    const gaps = s.slice(-7).map((x, i, a) => i ? (new Date(x.date) - new Date(a[i - 1].date)) / 864e5 : null).filter(g => g > 0);
+    if (!gaps.length) return '';
+    const every = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+    return `Next isi minyak ${when(every - daysSince)} (you fill up every ~${Math.round(every)} days)`;
   }
 
   function barChart(data) {
@@ -751,19 +888,20 @@
     }).join('');
     return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Spent per month"><line x1="${P.l}" x2="${W - P.r}" y1="${H - P.b}" y2="${H - P.b}" stroke="var(--line)"/>${bars}</svg>`;
   }
-  function lineChart(data) {
-    const W = 600, H = 190, P = { l: 34, r: 12, t: 16, b: 24 };
-    const vals = data.map(d => d.value), lo = Math.floor(Math.min(...vals) * 0.9), hi = Math.ceil(Math.max(...vals) * 1.1) || 1;
+  function lineChart(data, dec = 0, label = 'Consumption per fill-up') {
+    const W = 600, H = 190, P = { l: dec ? 42 : 34, r: 12, t: 16, b: 24 };
+    const vals = data.map(d => d.value), mn = Math.min(...vals), mx = Math.max(...vals);
+    const span = (mx - mn) || mx * 0.05 || 1, lo = Math.max(0, mn - span * 0.3), hi = mx + span * 0.3;
     const X = i => data.length === 1 ? (W + P.l - P.r) / 2 : P.l + i * (W - P.l - P.r) / (data.length - 1);
     const Y = v => H - P.b - (v - lo) / (hi - lo || 1) * (H - P.t - P.b);
     const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
     const path = data.map((d, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(d.value).toFixed(1)).join(' ');
     const step = Math.ceil(data.length / 7);
-    const grid = [lo, (lo + hi) / 2, hi].map(v => `<line x1="${P.l}" x2="${W - P.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${P.l - 6}" y="${Y(v) + 4}" text-anchor="end">${num(v, 0)}</text>`).join('');
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Consumption per fill-up">${grid}
+    const grid = [lo, (lo + hi) / 2, hi].map(v => `<line x1="${P.l}" x2="${W - P.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${P.l - 6}" y="${Y(v) + 4}" text-anchor="end">${num(v, dec)}</text>`).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}">${grid}
       <line x1="${P.l}" x2="${W - P.r}" y1="${Y(avg)}" y2="${Y(avg)}" stroke="var(--accent)" stroke-dasharray="4 4" opacity=".5"/>
       <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
-      ${data.map((d, i) => `<circle cx="${X(i)}" cy="${Y(d.value)}" r="4" fill="var(--card)" stroke="var(--accent)" stroke-width="2"><title>${d.label}: ${num(d.value, 1)}</title></circle>`).join('')}
+      ${data.map((d, i) => `<circle cx="${X(i)}" cy="${Y(d.value)}" r="4" fill="var(--card)" stroke="var(--accent)" stroke-width="2"><title>${d.label}: ${num(d.value, dec ? 3 : 1)}</title></circle>`).join('')}
       ${data.map((d, i) => i % step ? '' : `<text x="${X(i)}" y="${H - 6}" text-anchor="middle">${d.label}</text>`).join('')}
     </svg>`;
   }
@@ -851,17 +989,43 @@
   }
 
   /* ---------- settings & data ---------- */
-  $('#s-tank').value = settings.tank; $('#s-unit').value = settings.unit;
-  $('#s-tank').oninput = () => { settings.tank = $('#s-tank').value; saveSettings(); };
+  function renderSettings() {
+    const v = veh();
+    $('#s-veh').innerHTML = settings.vehicles.map(x => `<option value="${x.id}"${x.id === v.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('');
+    $('#s-vehRow').hidden = settings.vehicles.length < 2;
+    $('#s-name').value = v.name; $('#s-tank').value = v.tank; $('#s-budget').value = v.budget;
+    $('#delVeh').hidden = settings.vehicles.length < 2;
+    $('#s-unit').value = settings.unit;
+  }
+  $('#s-veh').onchange = () => switchVehicle($('#s-veh').value);
+  $('#s-name').oninput = () => { veh().name = $('#s-name').value.trim() || 'Vehicle'; saveSettings(); $('#s-veh').selectedOptions[0].textContent = veh().name; };
+  $('#s-tank').oninput = () => { veh().tank = $('#s-tank').value; saveSettings(); };
+  $('#s-budget').oninput = () => { veh().budget = $('#s-budget').value; saveSettings(); };
   $('#s-unit').onchange = () => { settings.unit = $('#s-unit').value; saveSettings(); };
+  $('#addVeh').onclick = () => {
+    const v = newVehicle('Vehicle ' + (settings.vehicles.length + 1));
+    settings.vehicles.push(v); switchVehicle(v.id);
+    $('#s-name').focus(); $('#s-name').select(); toast('Vehicle added. Give it a name.');
+  };
+  $('#delVeh').onclick = () => {
+    const v = veh(), n = mine().length;
+    if (!confirm(`Delete "${v.name}"${n ? ` and its ${n} fill-up${n === 1 ? '' : 's'}` : ''}? This cannot be undone.`)) return;
+    entries = entries.filter(x => x.vehicleId !== v.id); save(KEY, entries);
+    settings.vehicles = settings.vehicles.filter(x => x.id !== v.id);
+    switchVehicle(settings.vehicles[0].id); tidyPhotos(); toast('Vehicle deleted');
+  };
+  document.addEventListener('click', e => { if (e.target.closest('#setBudget')) { go('settings'); setTimeout(() => $('#s-budget').focus(), 50); } });
 
   const download = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); };
   $('#expJson').onclick = () => download(`fuel-log-${today()}.json`, JSON.stringify({ settings, entries }, null, 1), 'application/json');
   $('#expCsv').onclick = () => {
-    const L = Object.fromEntries(legs().map(x => [x.id, x]));
-    const rows = [['date', 'odometer_km', 'fuel', 'litres', 'price_per_l_rm', 'total_rm', 'gauge_before_pct', 'gauge_after_pct', 'full_tank', 'missed_previous', 'km_since_last', 'km_per_l', 'station']]
-      .concat(sorted().map(x => [x.date, x.odo, x.type, x.litres, x.price, x.total, x.before ?? '', x.after ?? '', x.full, !!x.missed,
-        L[x.id]?.km ?? '', L[x.id] ? L[x.id].kmpl.toFixed(2) : '', '"' + (x.station || '').replace(/"/g, '""') + '"']));
+    const vname = id => settings.vehicles.find(v => v.id === id)?.name || '';
+    const all = [...entries].sort((a, b) => vname(a.vehicleId).localeCompare(vname(b.vehicleId)) || a.date.localeCompare(b.date) || a.odo - b.odo);
+    const legsAll = {}; const cur = settings.current;
+    settings.vehicles.forEach(v => { settings.current = v.id; legs().forEach(l => legsAll[l.id] = l); }); settings.current = cur;
+    const rows = [['vehicle', 'date', 'odometer_km', 'fuel', 'litres', 'price_per_l_rm', 'total_rm', 'gauge_before_pct', 'gauge_after_pct', 'full_tank', 'missed_previous', 'km_since_last', 'km_per_l', 'station']]
+      .concat(all.map(x => ['"' + vname(x.vehicleId).replace(/"/g, '""') + '"', x.date, x.odo, x.type, x.litres, x.price, x.total, x.before ?? '', x.after ?? '', x.full, !!x.missed,
+        legsAll[x.id]?.km ?? '', legsAll[x.id] ? legsAll[x.id].kmpl.toFixed(2) : '', '"' + (x.station || '').replace(/"/g, '""') + '"']));
     download(`fuel-log-${today()}.csv`, rows.map(r => r.join(',')).join('\n'), 'text/csv');
   };
   $('#impJson').onchange = async e => {
@@ -871,8 +1035,13 @@
       if (!Array.isArray(list)) throw 0;
       const ids = new Set(entries.map(x => x.id)); const add = list.filter(x => x && x.id && x.date && !ids.has(x.id));
       add.forEach(x => { if (!x.thumb) x.hasReceipt = false; });
-      entries = entries.concat(add); save(KEY, entries); await tidyPhotos();
-      if (d.settings) { settings = Object.assign(settings, d.settings); saveSettings(); $('#s-tank').value = settings.tank; $('#s-unit').value = settings.unit; }
+      if (Array.isArray(d.settings?.vehicles)) { // bring in vehicles we don't have yet
+        const have = new Set(settings.vehicles.map(v => v.id));
+        d.settings.vehicles.filter(v => v && v.id && !have.has(v.id)).forEach(v => settings.vehicles.push(v));
+        saveSettings();
+      }
+      entries = entries.concat(add); save(KEY, entries); adoptOrphans(); await tidyPhotos();
+      renderSettings(); renderTitle();
       toast(`Imported ${add.length} fill-up(s)`);
     } catch { toast('That file is not a Fuel Log backup'); }
   };
@@ -884,16 +1053,17 @@
       if (d > new Date()) break;
       const before = [15, 20, 25, 10, 30][i % 5], litres = +((100 - before) / 100 * 40).toFixed(2), price = 2.05;
       entries.push({ id: 'demo' + i + Date.now(), date: localISO(d), odo, total: +(litres * price).toFixed(2), litres, price,
-        type: 'RON95', before, after: 100, full: true, missed: false, station: 'Sample', hasReceipt: false });
+        type: 'RON95', before, after: 100, full: true, missed: false, station: 'Sample', hasReceipt: false, vehicleId: settings.current });
       odo += Math.round(380 + Math.sin(i) * 60);
     }
-    if (!settings.tank) { settings.tank = '40'; $('#s-tank').value = 40; saveSettings(); }
+    if (!veh().tank) { veh().tank = '40'; saveSettings(); }
     save(KEY, entries); toast('Sample data added');
   }
   $('#loadDemo').onclick = () => { if (entries.length && !confirm('Add sample fill-ups to your existing data?')) return; loadDemo(); go('home'); };
   $('#demoBtn').onclick = () => { loadDemo(); renderHome(); };
 
   resetForm();
+  renderTitle();
   renderHome();
   tidyPhotos();
   if ('serviceWorker' in navigator && location.protocol.startsWith('http'))
