@@ -119,6 +119,15 @@
   .hero .foot .range small { font-size: 13px; font-weight: 500; color: var(--muted); }
   .hero .foot .next { color: var(--text); font-size: 14px; }
   .hero .foot .next b { color: var(--accent); }
+  .hero .foot .range.low { color: var(--danger); }
+  .hero .foot .range.low small { color: var(--danger); }
+  .hero .foot .upd { font-size: 13px; padding: 8px 4px; margin: -8px -4px; min-height: 0; }
+  .budi { display: flex; gap: 10px; align-items: center; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line);
+    border-radius: 12px; background: var(--bg); color: var(--text); font-size: 14px; cursor: pointer; }
+  .budi:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .budi b { color: var(--accent); }
+  .opt { color: var(--muted); font-weight: 400; }
+  .bar.budi-bar > div { background: var(--good); }
   .fuelgauge { flex: none; width: 104px; height: 64px; }
   .fuelgauge text { font-size: 10px; fill: var(--muted); font-weight: 600; }
   .tabs[role=radiogroup] button[aria-checked="true"] { background: var(--card); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
@@ -203,9 +212,9 @@
   .vehbtn svg { width: 18px; height: 18px; color: var(--muted); flex: none; }
   .vehbtn img { width: 26px; height: 26px; border-radius: 7px; }
   .top h1 .sub { font-size: 14px; color: var(--muted); font-weight: 500; }
-  #vehDlg { width: min(92vw, 380px); }
+  #vehDlg, #checkDlg { width: min(92vw, 380px); }
   @media (max-width: 600px) { /* bottom sheet on phones: easy to reach with a thumb */
-    #vehDlg { margin: auto 0 0; width: 100%; max-width: 100%; border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+    #vehDlg, #checkDlg { margin: auto 0 0; width: 100%; max-width: 100%; border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom); }
   }
   #vehList button { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; border-radius: 0;
     border-bottom: 1px solid var(--line); padding: 14px; background: none; text-align: left; }
@@ -283,6 +292,7 @@
         <div class="col"><div class="k" id="heroMonthLabel">Spent this month</div><div class="v" id="heroSpent"></div><div class="s" id="heroSpentSub"></div></div>
         <div class="col"><div class="k">Avg consumption</div><div class="v" id="heroEff"></div><div class="s" id="heroEffSub"></div></div>
         <div class="budget" id="budget"></div>
+        <div class="budget" id="budiLine"></div>
         <div class="foot" id="heroFoot"></div>
       </div>
 
@@ -329,9 +339,11 @@
         <div class="trio">
           <div><label for="f-total">Total RM</label><input id="f-total" type="number" inputmode="decimal" step="0.01" min="0" placeholder="50.00"></div>
           <div><label for="f-litres">Litres</label><input id="f-litres" type="number" inputmode="decimal" step="0.001" min="0" placeholder="24.39"></div>
-          <div><label for="f-price">RM / litre</label><input id="f-price" type="number" inputmode="decimal" step="0.001" min="0" placeholder="2.05"></div>
+          <div><label for="f-price">RM / litre</label><input id="f-price" type="number" inputmode="decimal" step="0.001" min="0" placeholder="1.99"></div>
         </div>
         <div class="hint">Fill any two, the third is worked out.</div>
+        <label class="budi" id="budiRow" hidden><input id="f-budi" type="checkbox">
+          <span><b>BUDI95</b> price, RM <span id="budiPriceLbl">1.99</span>/L<span class="hint" id="budiQuotaHint" style="display:block;margin:2px 0 0"></span></span></label>
       </div>
 
       <div class="field odo">
@@ -348,6 +360,14 @@
       <div class="field">
         <div class="glabel"><label id="l-after">Fuel gauge after</label><span id="h-after"></span></div>
         <div class="meter" data-g="after" role="radiogroup" aria-labelledby="l-after"></div>
+      </div>
+      <div class="field">
+        <label>Range on dashboard <span class="opt">(optional)</span></label>
+        <div class="grid2">
+          <input id="f-rangeBefore" type="number" inputmode="numeric" min="0" step="1" placeholder="Before, km" aria-label="Dashboard range before filling, in km">
+          <input id="f-rangeAfter" type="number" inputmode="numeric" min="0" step="1" placeholder="After, km" aria-label="Dashboard range after filling, in km">
+        </div>
+        <div class="hint">The km figure beside your fuel gauge. Used to tell you how far you can still go.</div>
       </div>
 
       <details class="more" id="more">
@@ -387,6 +407,19 @@
       <button id="delVeh" class="danger" style="margin-top:12px">Delete this vehicle</button>
     </div>
     <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:4px"><h2 style="margin:0">BUDI95 subsidy</h2>
+        <label class="check" style="margin:0"><input id="s-budiOn" type="checkbox"> I get BUDI95</label></div>
+      <div id="budiFields">
+        <div class="grid2" style="margin-top:10px">
+          <div><label for="s-budiQuota">Monthly quota (L)</label><input id="s-budiQuota" type="number" inputmode="numeric" min="0" step="10"></div>
+          <div><label for="s-budiPrice">BUDI95 price (RM/L)</label><input id="s-budiPrice" type="number" inputmode="decimal" min="0" step="0.01"></div>
+          <div class="span2"><label for="s-marketPrice">RON95 without subsidy (RM/L)</label><input id="s-marketPrice" type="number" inputmode="decimal" min="0" step="0.01">
+            <div class="hint">Changes weekly. Only used to show how much the subsidy saves you.</div></div>
+        </div>
+        <div class="hint" style="margin-top:10px">The quota is per person, so it's shared by all your vehicles. E-hailing drivers get 800 L.</div>
+      </div>
+    </div>
+    <div class="card">
       <h2>Display</h2>
       <label>Day / night mode</label>
       <div class="tabs" role="radiogroup" aria-label="Day or night mode" id="themeTabs" style="margin:0 0 14px">
@@ -419,6 +452,16 @@
 </nav>
 
 <div class="toast" id="toast" role="status"></div>
+<dialog id="checkDlg" aria-labelledby="checkTitle">
+  <form id="checkForm" novalidate>
+    <div class="bar"><strong id="checkTitle">What does your dashboard show?</strong><button type="button" onclick="this.closest('dialog').close()">Close</button></div>
+    <div style="padding:14px 14px 18px;display:grid;gap:12px">
+      <div><label for="c-range">Range now (km)</label><input id="c-range" type="number" inputmode="numeric" min="0" step="1" placeholder="The km beside the fuel gauge"></div>
+      <div><label for="c-odo">Odometer now (km) <span class="opt">(optional)</span></label><input id="c-odo" type="number" inputmode="numeric" min="0" step="1"></div>
+      <button class="primary" type="submit" style="padding:12px">Update</button>
+    </div>
+  </form>
+</dialog>
 <dialog id="vehDlg" aria-label="Choose vehicle">
   <div class="bar"><strong>Vehicle</strong><button type="button" onclick="this.closest('dialog').close()">Close</button></div>
   <div id="vehList"></div>
@@ -440,6 +483,8 @@
   let entries = load(KEY, []);
   let settings = Object.assign({ unit: 'kmpl', period: 'all', theme: 'auto' }, load(SKEY, {}));
   const saveSettings = () => save(SKEY, settings);
+  // BUDI95 (Malaysia): RON95 at RM1.99/L up to a monthly quota per person (300 L since 1 Sep 2026; e-hailing 800 L).
+  settings.budi = Object.assign({ on: true, quota: 300, price: 1.99, market: 3.87 }, settings.budi || {});
   const newVehicle = (name, extra = {}) => ({ id: 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, tank: '', budget: '', lastType: 'RON95', lastStation: '', ...extra });
   // Older versions had one vehicle with settings at the top level: turn that into the first vehicle.
   if (!Array.isArray(settings.vehicles) || !settings.vehicles.length) {
@@ -609,6 +654,31 @@
     if (target === 'price' && t && l) F('price').value = (t / l).toFixed(3);
   }));
 
+  // ---- BUDI95 ----
+  const budiPrice = () => +settings.budi.price || 1.99;
+  const isBudi = x => x.budi ?? (x.type === 'RON95' && Math.abs(x.price - budiPrice()) < 0.006);
+  const budiUsed = (monthKey, exceptId) => entries.filter(x => x.id !== exceptId && x.date.startsWith(monthKey) && isBudi(x)).reduce((a, x) => a + x.litres, 0);
+  const budiLeft = (monthKey, exceptId) => Math.max(0, (+settings.budi.quota || 0) - budiUsed(monthKey, exceptId));
+  function updateBudiRow() {
+    const show = settings.budi.on && F('type').value === 'RON95';
+    $('#budiRow').hidden = !show;
+    if (!show) return;
+    $('#budiPriceLbl').textContent = num(budiPrice(), 2);
+    const left = budiLeft((F('date').value || today()).slice(0, 7), F('id').value), l = +F('litres').value || 0, h = $('#budiQuotaHint');
+    h.classList.remove('warn');
+    if (F('budi').checked && l > left + 0.05) { h.textContent = `Only ${num(left, 1)} L of quota left this month`; h.classList.add('warn'); }
+    else h.textContent = `${num(left, 0)} L of ${num(+settings.budi.quota, 0)} L quota left this month`;
+  }
+  // Ticking BUDI95 fills in the subsidised price; unticking puts in the normal price.
+  F('budi').addEventListener('change', () => {
+    const p = F('budi').checked ? budiPrice() : +settings.budi.market;
+    if (p) { F('price').value = p.toFixed(2); F('price').dispatchEvent(new Event('input', { bubbles: true })); }
+    updateBudiRow();
+  });
+  F('price').addEventListener('input', () => { if (!$('#budiRow').hidden) F('budi').checked = Math.abs(+F('price').value - budiPrice()) < 0.006; updateBudiRow(); });
+  ['litres', 'total'].forEach(k => F(k).addEventListener('input', updateBudiRow));
+  ['type', 'date'].forEach(k => F(k).addEventListener('change', updateBudiRow));
+
   const sorted = () => mine().sort((a, b) => a.date.localeCompare(b.date) || a.odo - b.odo);
   const prevOf = (date, id) => sorted().filter(x => x.id !== id && x.date <= date).at(-1);
 
@@ -638,6 +708,14 @@
     F('type').value = veh().lastType || 'RON95'; F('station').value = veh().lastStation || '';
     gauge.before = null; gauge.after = 100; buildMeters();
     lastEdited = []; pendingThumb = null;
+    F('budi').checked = false;
+    // Start with the BUDI95 price for RON95 when there's quota left, so typing the total is enough.
+    if (settings.budi.on && F('type').value === 'RON95') {
+      const hasQuota = budiLeft(today().slice(0, 7)) > 0, p = hasQuota ? budiPrice() : +settings.budi.market;
+      if (p) { F('price').value = p.toFixed(2); lastEdited = ['price']; }
+      F('budi').checked = hasQuota;
+    }
+    updateBudiRow();
     $('#scanRes').hidden = true; $('#ocrRawWrap').hidden = true; $('#ocrStatus').textContent = ''; $('#scanLabel').textContent = 'Scan receipt';
     $('#delBtn').hidden = true; $('#saveBtn').textContent = 'Save'; $('#more').open = false;
     odoHint(); moreSummary();
@@ -649,6 +727,8 @@
     F('id').value = x.id; F('date').value = x.date; F('odo').value = x.odo; F('total').value = x.total;
     F('litres').value = x.litres; F('price').value = x.price; F('type').value = x.type;
     F('station').value = x.station || ''; F('missed').checked = !!x.missed;
+    F('rangeBefore').value = x.rangeBefore ?? ''; F('rangeAfter').value = x.rangeAfter ?? '';
+    F('budi').checked = isBudi(x); lastEdited = []; updateBudiRow();
     setGauge('before', x.before ?? null); setGauge('after', x.after ?? (x.full ? 100 : null));
     $('#more').open = !!x.missed;
     $('#delBtn').hidden = false; $('#saveBtn').textContent = 'Save changes';
@@ -675,7 +755,9 @@
     const entry = {
       id, date: F('date').value || today(), odo, total: t, litres: l, price: p, type: F('type').value,
       before: gauge.before, after: gauge.after, full: gauge.after === 100, missed: F('missed').checked,
-      station: F('station').value.trim(), hasReceipt: !!old?.hasReceipt, vehicleId: old?.vehicleId || settings.current
+      station: F('station').value.trim(), hasReceipt: !!old?.hasReceipt, vehicleId: old?.vehicleId || settings.current,
+      budi: !$('#budiRow').hidden && F('budi').checked,
+      rangeBefore: +F('rangeBefore').value || null, rangeAfter: +F('rangeAfter').value || null
     };
     const prev = prevOf(entry.date, id);
     if (prev && odo <= prev.odo && !confirm(`Odometer ${odo} is not higher than the previous fill-up (${prev.odo}). Save anyway?`)) return;
@@ -744,6 +826,9 @@
     if (t && p && !l) F('litres').value = (t / p).toFixed(3);
     if (l && p && !t) F('total').value = (l * p).toFixed(2);
     if (r.type) { F('type').value = r.type; found.push(r.type); }
+    updateBudiRow();
+    if (r.budi && !$('#budiRow').hidden && !F('budi').checked) { F('budi').checked = true; F('budi').dispatchEvent(new Event('change')); }
+    if (!$('#budiRow').hidden && F('budi').checked) found.push('BUDI95');
     if (r.date) { F('date').value = r.date; found.push('date'); }
     moreSummary(); odoHint();
     $('#ocrStatus').textContent = found.length ? 'Found ' + found.join(', ') + '. Check them, then add the odometer.'
@@ -762,6 +847,8 @@
     else if (/RON\s*100|V-?POWER\s*RACING|BLAZE\s*100/.test(text)) out.type = 'RON100';
     else if (/DIESEL|DYNAMIC\s*DIESEL|EURO\s*5|B10|B7/.test(text)) out.type = 'Diesel';
     else if (/RON\s*95|PRIMAX\s*95|FUELSAVE|PETROL|GASOLINE|ULP/.test(text)) out.type = 'RON95';
+
+    if (/BUDI|SUBSIDI/.test(text)) out.budi = true;
 
     // litres: "24.390 L", "24.39LTR", "LITRE 24.39", "VOLUME: 24.39", "QTY 24.390"
     let m = text.match(/(\d{1,3}\.\d{2,3})\s*(?:L\b|LT\b|LTR|LITRE|LITER|LTRS)/);
@@ -888,9 +975,19 @@
 
     const last = s.at(-1), nf = nextFill(s, L);
     $('#heroFoot').innerHTML = (nf?.level != null ? fuelGauge(nf.level) : '') + '<div class="txt">' +
-      (nf?.left != null ? `<div class="range">≈ ${num(nf.left, 0)} <small>km left</small></div>` : '') +
-      (nf ? `<div class="next">Next fill ${nf.when}${nf.every ? ` · every ~${nf.every} days` : ''}</div>` : '') +
-      `<div>Last filled ${daysAgo(last.date)} at ${num(last.odo, 0)} km</div></div>`;
+      (nf?.left != null ? `<div class="range${nf.low ? ' low' : ''}">≈ ${num(nf.left, 0)} <small>km left${nf.low ? ' · fill up soon' : ''}</small></div>` : '') +
+      (nf?.when ? `<div class="next">Next fill ${nf.when}${nf.every ? ` · every ~${nf.every} days` : ''}</div>` : '') +
+      `<div>${nf?.checked ? `Checked dashboard ${daysAgo(nf.checked)}` : `Filled ${daysAgo(last.date)} · ${num(last.odo, 0)} km`}` +
+      ' · <button class="link upd" id="rangeUpd" aria-label="Update the range from your dashboard">Update</button></div></div>';
+
+    // BUDI95 quota: per person, so counted across every vehicle
+    const qEl = $('#budiLine');
+    if (settings.budi.on && entries.some(isBudi)) {
+      const quota = +settings.budi.quota || 0, used = budiUsed(mk), pct = quota ? Math.min(100, used / quota * 100) : 0;
+      const saved = used * Math.max(0, (+settings.budi.market || 0) - budiPrice());
+      qEl.innerHTML = `<div class="bar budi-bar ${pct >= 100 ? 'over' : pct >= 85 ? 'pace' : ''}" role="progressbar" aria-valuenow="${Math.round(used)}" aria-valuemin="0" aria-valuemax="${quota}" aria-label="BUDI95 quota used this month"><div style="width:${pct}%"></div></div>
+        <div class="row2"><span>BUDI95 ${num(used, 0)} / ${num(quota, 0)} L</span><span>${saved >= 1 ? `saved ≈ RM ${num(saved, 0)}` : ''}</span></div>`;
+    } else qEl.innerHTML = '';
 
     // period overview
     const p = settings.period;
@@ -943,36 +1040,69 @@
   let lastW = innerWidth;
   addEventListener('resize', () => { if (Math.abs(innerWidth - lastW) > 20 && view === 'home') { lastW = innerWidth; renderHome(); } });
 
-  // Estimate fuel left and when the next fill-up is likely, from driving pace and the usual refill level.
+  // Estimate fuel left and when the next fill-up is likely.
+  // Best source first: a range you entered from the dashboard today, then the range shown after the last fill-up,
+  // then gauge × tank size × your km/L. Distance since the fill-up comes from the odometer if you gave it, else your usual pace.
   function nextFill(s, L) {
-    if (s.length < 2) return null;
-    const last = s.at(-1), tank = +veh().tank || 0;
-    const recent = s.filter(x => (new Date(last.date) - new Date(x.date)) / 864e5 <= 120);
-    const pool = recent.length >= 2 ? recent : s.slice(-2);
-    const spanDays = Math.max(1, (new Date(last.date) - new Date(pool[0].date)) / 864e5);
-    const kmPerDay = (last.odo - pool[0].odo) / spanDays;
-    const daysSince = Math.max(0, Math.round((new Date(today() + 'T00:00') - new Date(last.date + 'T00:00')) / 864e5));
+    if (!s.length) return null;
+    const last = s.at(-1), tank = +veh().tank || 0, avg = avgOf(L.slice(-5));
+    const daysFrom = d => Math.max(0, Math.round((new Date(today() + 'T00:00') - new Date(d + 'T00:00')) / 864e5));
+    let kmPerDay = null;
+    if (s.length >= 2) {
+      const recent = s.filter(x => (new Date(last.date) - new Date(x.date)) / 864e5 <= 120);
+      const pool = recent.length >= 2 ? recent : s.slice(-2);
+      const span = Math.max(1, (new Date(last.date) - new Date(pool[0].date)) / 864e5);
+      kmPerDay = (last.odo - pool[0].odo) / span;
+      if (!(kmPerDay > 0)) kmPerDay = null;
+    }
+    const chk = veh().check?.fillId === last.id ? veh().check : null;
+    let kmSince = null;
+    if (chk?.odo > last.odo) kmSince = chk.odo - last.odo + (kmPerDay || 0) * daysFrom(chk.date);
+    else if (kmPerDay) kmSince = kmPerDay * daysFrom(last.date);
+
+    let left = null;
+    if (chk?.range != null) left = chk.range - (kmPerDay || 0) * daysFrom(chk.date);
+    else if (last.rangeAfter && kmSince != null) left = last.rangeAfter - kmSince;
+    else if (tank && avg && last.after != null && kmSince != null) left = last.after / 100 * tank * avg - kmSince;
+    if (left != null) left = Math.max(0, left);
+
+    // what a full tank is worth in km (for the dial), and how many km you usually have left when you refill
+    const fullRange = last.rangeAfter ? last.rangeAfter / ((last.after || 100) / 100) : (tank && avg ? tank * avg : null);
+    const level = left != null && fullRange ? Math.min(1, left / fullRange) : null;
+    const median = a => a.length ? a.sort((x, y) => x - y)[Math.floor(a.length / 2)] : null;
+    const rb = median(s.map(x => x.rangeBefore).filter(v => v > 0));
+    const gb = median(s.map(x => x.before).filter(v => v != null));
+    const reserve = rb ?? (fullRange ? (gb ?? 15) / 100 * fullRange : 50);
+
     const when = days => {
       if (days <= 0.5) return '<b>due now</b>';
       const d = new Date(); d.setDate(d.getDate() + Math.round(days));
       return '<b>' + d.toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short' }) + '</b>';
     };
-    const avg = avgOf(L.slice(-5));
-    if (tank && avg && last.after != null && kmPerDay > 0) {
-      const befores = s.map(x => x.before).filter(v => v != null).sort((a, b) => a - b);
-      const refillAt = befores.length ? befores[Math.floor(befores.length / 2)] : 15; // usual gauge level when you refill
-      const kmSince = kmPerDay * daysSince;
-      const left = Math.max(0, last.after / 100 * tank * avg - kmSince);
-      const toRefill = (last.after - refillAt) / 100 * tank * avg - kmSince;
-      const level = Math.max(0, Math.min(1, (last.after / 100 * tank - kmSince / avg) / tank));
-      return { left, level, when: when(toRefill / kmPerDay) };
-    }
-    // No tank size: fall back to how often you usually fill up.
+    if (left != null) return { left, level, checked: chk?.date, low: left < 60, when: kmPerDay ? when((left - reserve) / kmPerDay) : '' };
+
+    // No fuel estimate: fall back to how often you usually fill up.
     const gaps = s.slice(-7).map((x, i, a) => i ? (new Date(x.date) - new Date(a[i - 1].date)) / 864e5 : null).filter(g => g > 0);
     if (!gaps.length) return null;
     const every = gaps.reduce((a, b) => a + b, 0) / gaps.length;
-    return { when: when(every - daysSince), every: Math.round(every) };
+    return { when: when(every - daysFrom(last.date)), every: Math.round(every) };
   }
+
+  // "Update" on Home: type what the dashboard shows right now.
+  const checkDlg = $('#checkDlg');
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#rangeUpd')) return;
+    $('#c-range').value = ''; $('#c-odo').value = ''; checkDlg.showModal(); $('#c-range').focus();
+  });
+  checkDlg.onclick = e => { if (e.target === checkDlg) checkDlg.close(); };
+  $('#checkForm').onsubmit = e => {
+    e.preventDefault();
+    const range = +$('#c-range').value, odo = +$('#c-odo').value, last = sorted().at(-1);
+    if (!range && !odo) { toast('Enter the range or the odometer'); return; }
+    if (odo && last && odo < last.odo) { toast(`Odometer is lower than your last fill-up (${num(last.odo, 0)} km)`); return; }
+    veh().check = { date: today(), range: range || null, odo: odo || null, fillId: last?.id };
+    saveSettings(); checkDlg.close(); renderHome(); toast('Range updated');
+  };
 
   // Small fuel gauge dial like the one on the dashboard: needle sweeps from 0 (left) to 1 (right),
   // with the same marks as the vehicle's gauge and a red zone in the last step.
@@ -1045,6 +1175,7 @@
       return `<div class="month"><div class="mh"><b>${name}</b><span>${rm(tot)} · ${num(lit, 0)} L</span></div><div class="list">` +
         g.items.map(x => {
           const leg = L[x.id], tags = [];
+          if (isBudi(x)) tags.push('<span class="pill">BUDI95</span>');
           if (!x.full) tags.push('<span class="pill w">partial</span>');
           if (x.missed) tags.push('<span class="pill w">after missed</span>');
           const meta = [num(x.odo, 0) + ' km', num(x.litres, 2) + ' L', x.type, x.station ? esc(x.station) : ''].filter(Boolean).join(' · ');
@@ -1133,11 +1264,16 @@
     $('#s-name').value = v.name; $('#s-tank').value = v.tank; $('#s-budget').value = v.budget; $('#s-steps').value = String(steps());
     $('#delVeh').hidden = settings.vehicles.length < 2;
     $('#s-unit').value = settings.unit;
+    $('#s-budiOn').checked = settings.budi.on; $('#budiFields').hidden = !settings.budi.on;
+    $('#s-budiQuota').value = settings.budi.quota; $('#s-budiPrice').value = settings.budi.price; $('#s-marketPrice').value = settings.budi.market;
   }
   $('#s-veh').onchange = () => switchVehicle($('#s-veh').value);
   $('#s-name').oninput = () => { veh().name = $('#s-name').value.trim() || 'Vehicle'; saveSettings(); $('#s-veh').selectedOptions[0].textContent = veh().name; };
   $('#s-tank').oninput = () => { veh().tank = $('#s-tank').value; saveSettings(); };
   $('#s-budget').oninput = () => { veh().budget = $('#s-budget').value; saveSettings(); };
+  $('#s-budiOn').onchange = () => { settings.budi.on = $('#s-budiOn').checked; $('#budiFields').hidden = !settings.budi.on; saveSettings(); };
+  [['s-budiQuota', 'quota'], ['s-budiPrice', 'price'], ['s-marketPrice', 'market']].forEach(([id, k]) =>
+    $('#' + id).oninput = () => { settings.budi[k] = +$('#' + id).value || 0; saveSettings(); });
   $('#s-steps').onchange = () => { veh().gaugeSteps = +$('#s-steps').value; saveSettings(); buildMeters(); };
   $('#s-unit').onchange = () => { settings.unit = $('#s-unit').value; saveSettings(); };
   $('#addVeh').onclick = () => {
@@ -1160,8 +1296,8 @@
     const all = [...entries].sort((a, b) => vname(a.vehicleId).localeCompare(vname(b.vehicleId)) || a.date.localeCompare(b.date) || a.odo - b.odo);
     const legsAll = {}; const cur = settings.current;
     settings.vehicles.forEach(v => { settings.current = v.id; legs().forEach(l => legsAll[l.id] = l); }); settings.current = cur;
-    const rows = [['vehicle', 'date', 'odometer_km', 'fuel', 'litres', 'price_per_l_rm', 'total_rm', 'gauge_before_pct', 'gauge_after_pct', 'full_tank', 'missed_previous', 'km_since_last', 'km_per_l', 'station']]
-      .concat(all.map(x => ['"' + vname(x.vehicleId).replace(/"/g, '""') + '"', x.date, x.odo, x.type, x.litres, x.price, x.total, x.before ?? '', x.after ?? '', x.full, !!x.missed,
+    const rows = [['vehicle', 'date', 'odometer_km', 'fuel', 'litres', 'price_per_l_rm', 'total_rm', 'gauge_before_pct', 'gauge_after_pct', 'full_tank', 'missed_previous', 'budi95', 'range_before_km', 'range_after_km', 'km_since_last', 'km_per_l', 'station']]
+      .concat(all.map(x => ['"' + vname(x.vehicleId).replace(/"/g, '""') + '"', x.date, x.odo, x.type, x.litres, x.price, x.total, x.before ?? '', x.after ?? '', x.full, !!x.missed, isBudi(x), x.rangeBefore ?? '', x.rangeAfter ?? '',
         legsAll[x.id]?.km ?? '', legsAll[x.id] ? legsAll[x.id].kmpl.toFixed(2) : '', '"' + (x.station || '').replace(/"/g, '""') + '"']));
     download(`fuel-log-${today()}.csv`, rows.map(r => r.join(',')).join('\n'), 'text/csv');
   };
@@ -1188,9 +1324,10 @@
     for (let i = 0; i < 14; i++) {
       const d = new Date(base); d.setDate(d.getDate() + i * 11);
       if (d > new Date()) break;
-      const before = [15, 20, 25, 10, 30][i % 5], litres = +((100 - before) / 100 * 40).toFixed(2), price = 2.05;
+      const before = [15, 20, 25, 10, 30][i % 5], litres = +((100 - before) / 100 * 40).toFixed(2), price = budiPrice();
       entries.push({ id: 'demo' + i + Date.now(), date: localISO(d), odo, total: +(litres * price).toFixed(2), litres, price,
-        type: 'RON95', before, after: 100, full: true, missed: false, station: 'Sample', hasReceipt: false, vehicleId: settings.current });
+        type: 'RON95', before, after: 100, full: true, missed: false, station: 'Sample', hasReceipt: false, vehicleId: settings.current,
+        budi: true, rangeBefore: Math.round(before / 100 * 480), rangeAfter: 480 + (i % 3) * 10 });
       odo += Math.round(380 + Math.sin(i) * 60);
     }
     if (!veh().tank) { veh().tank = '40'; saveSettings(); }

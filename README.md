@@ -15,13 +15,16 @@ No sign-up, no server, no ads. Everything stays on your phone.
 - Fill in any two of *total / litres / RM per litre* and the third is worked out.
 - **Odometer** with a "+420 km since your last fill-up" hint and a warning for likely typos.
 - **Fuel gauge before and after.** The picker shows the same marks as your dashboard's fuel gauge (8 steps from 0 to 1 by default; set the number of steps per vehicle in Settings). Tap the mark the needle points to.
+- **BUDI95 toggle** for RON95: fills in the subsidised price (RM 1.99/L) and shows how much of your monthly quota is left. Untick it when you're over the quota and it switches to the unsubsidised price.
+- **Range on dashboard (optional)**: the km figure beside your car's fuel gauge, before and after the fill.
 - Date, fuel type, station and "I missed logging the previous fill-up" are folded under **More**. The last fuel type and station are remembered.
 - After saving you get one line on how that tank did, e.g. *"14.0 km/L, 19% better than your average."*
 
 **Home**
 - **Spent this month** with an optional **monthly budget** bar. The bar turns orange when you're on pace to go over and red once you have.
 - **Average consumption** (km/L or L/100 km).
-- **Dashboard-style fuel gauge** with an estimate of **km left** and **when your next fill-up is due**.
+- **BUDI95 quota bar**: litres used out of your monthly quota (shared across all your vehicles) and roughly how much the subsidy saved you.
+- **Dashboard-style fuel gauge** with an estimate of **km left** and **when your next fill-up is due**. A warning appears under 60 km. Tap **Update** to enter the range (and odometer) your dashboard shows right now, and the estimate follows your car.
 - An overview for *Month / 3 months / Year / All*: spent, litres, cost per km, best and worst km/L.
 - One chart with tabs: **Spending** per month, **Price per litre** trend, **km/L** per fill-up.
 
@@ -44,7 +47,11 @@ No sign-up, no server, no ads. Everything stays on your phone.
 
 km/L = distance on the odometer ÷ fuel used. If you skipped logging a fill-up, tick *"I missed logging the fill-up before this one"* so that stretch doesn't skew your average.
 
-The **range and next fill-up** estimates use your recent km/L, how far you usually drive per day and the gauge level you usually refill at. They are estimates; the gauge in your car is the real reading.
+The **range and next fill-up** estimates use, in order of preference: the range you entered with **Update**, the dashboard range you logged after the last fill, or the gauge level × tank × your recent km/L. Distance driven since then comes from the odometer you entered, or from how far you usually drive per day. Next fill-up is when you'd reach the range you usually refill at. They are estimates; your car's dashboard is the real reading.
+
+## BUDI95 (Malaysia)
+
+Under BUDI95, eligible Malaysians pay **RM 1.99/L for RON95** up to a monthly quota (**300 L** from 1 Sep 2026; e-hailing drivers get 800 L). Above the quota you pay the unsubsidised price, which changes weekly. Set these under **Settings → BUDI95 subsidy**: whether you get it, your quota, the subsidised price and the current unsubsidised price. The quota is per person, so the app counts fill-ups across all your vehicles. Receipts that mention BUDI or SUBSIDI are tagged automatically when scanned.
 
 ## Install on your phone
 
