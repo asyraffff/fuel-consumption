@@ -39,8 +39,11 @@
   .icon-btn:hover { background: var(--accent-soft); }
   .icon-btn svg { width: 22px; height: 22px; }
 
-  main { max-width: 640px; margin: 0 auto; padding: 16px 16px calc(96px + env(safe-area-inset-bottom)); }
-  body.adding main { padding-bottom: 24px; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { overscroll-behavior-y: none; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px 16px calc(100px + env(safe-area-inset-bottom)); }
+  body.sub main { padding-bottom: 24px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
   /* bottom nav */
   .bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--card); border-top: 1px solid var(--line);
@@ -53,7 +56,7 @@
     padding: 12px 22px; border-radius: 999px; display: flex; align-items: center; gap: 6px; cursor: pointer;
     box-shadow: 0 4px 14px rgba(15,118,110,.35); transform: translateY(-14px); }
   .fab svg { width: 20px; height: 20px; }
-  body.adding .bottom { display: none; }
+  body.sub .bottom { display: none; }
 
   /* generic */
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow); }
@@ -62,10 +65,12 @@
     padding: 9px 14px; border-radius: 10px; cursor: pointer; }
   button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
   button.danger { color: var(--danger); }
-  button.link { border: 0; background: none; color: var(--accent); padding: 4px 0; font-weight: 600; }
+  button.link { border: 0; background: none; color: var(--accent); padding: 10px 0; font-weight: 600; min-height: 40px; }
   label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
-  input, select { width: 100%; font: inherit; color: var(--text); background: var(--bg);
-    border: 1px solid var(--line); border-radius: 10px; padding: 10px 11px; }
+  /* 16px stops iPhones zooming in when a field is tapped */
+  input, select { width: 100%; font: inherit; font-size: 16px; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 11px; min-height: 44px; }
+  input[type=checkbox] { min-height: 0; width: 20px; height: 20px; accent-color: var(--accent); }
   input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   .hint { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
   .hint.warn { color: var(--warn); }
@@ -77,25 +82,37 @@
   /* home */
   .note { display: flex; gap: 10px; align-items: flex-start; background: var(--accent-soft); color: var(--text); border-radius: 14px;
     padding: 12px 14px; margin-bottom: 14px; }
-  .note .x { margin-left: auto; border: 0; background: none; color: var(--muted); padding: 0 4px; font-size: 18px; line-height: 1; }
+  .note .x { margin: -8px -8px -8px auto; border: 0; background: none; color: var(--muted); width: 40px; height: 40px; padding: 0; font-size: 20px; line-height: 1; flex: none; }
   .note b { color: var(--accent); }
-  .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0; overflow: hidden; }
-  .hero > div { padding: 16px; }
-  .hero > div + div { border-left: 1px solid var(--line); }
-  .hero .k { color: var(--muted); font-size: 13px; }
-  .hero .v { font-size: 28px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 2px; }
-  .hero .v small { font-size: 15px; font-weight: 600; color: var(--muted); }
-  .hero .s { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
-  .hero .foot { grid-column: 1 / -1; border-left: 0 !important; border-top: 1px solid var(--line); padding: 10px 16px; font-size: 13px; color: var(--muted); }
-  .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px; }
-  .chips button { padding: 5px 4px; border-radius: 999px; font-size: 13px; white-space: nowrap; }
+  .hero { display: grid; grid-template-columns: 1fr 1fr; padding: 0; overflow: hidden; }
+  .hero .col { padding: 16px 16px 12px; min-width: 0; }
+  .hero .col + .col { border-left: 1px solid var(--line); }
+  .hero .k { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hero .v { font-size: clamp(22px, 7vw, 28px); font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 2px; white-space: nowrap; }
+  .hero .v small { font-size: 14px; font-weight: 600; color: var(--muted); }
+  .hero .s { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+  .hero .budget { grid-column: 1 / -1; padding: 0 16px 14px; font-size: 12.5px; color: var(--muted); }
+  .hero .budget:empty { display: none; }
+  .hero .budget .bar { margin: 0 0 6px; }
+  .hero .budget .row2 { display: flex; justify-content: space-between; gap: 8px; }
+  .hero .foot { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 12px 16px; font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
+  .hero .foot .next { color: var(--text); font-size: 14px; }
+  .hero .foot .next b { color: var(--accent); }
+  .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 16px; }
+  .chips button { min-height: 38px; padding: 6px 4px; border-radius: 999px; font-size: 14px; white-space: nowrap; }
   .chips button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
   .mini { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
   .mini .k { color: var(--muted); font-size: 12.5px; }
-  .mini .v { font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .mini .v { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
   .mini .s { color: var(--muted); font-size: 12px; }
-  .chart svg { display: block; width: 100%; height: auto; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--bg); border-radius: 12px; padding: 3px; margin: 18px 0 8px; border: 1px solid var(--line); }
+  .tabs button { border: 0; background: none; min-height: 36px; padding: 6px 4px; font-size: 14px; color: var(--muted); border-radius: 9px; }
+  .tabs button[aria-selected="true"] { background: var(--card); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  #chartNote { min-height: 18px; margin: 0 0 6px; }
+  .chart { min-height: 180px; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
   .chart text { fill: var(--muted); font-size: 11px; }
+  .chart .hint { padding: 60px 8px; text-align: center; }
   .empty { text-align: center; padding: 36px 16px; }
   .empty .big { font-size: 44px; }
   .empty h2 { margin: 8px 0 6px; font-size: 18px; }
@@ -135,6 +152,9 @@
   .field { margin-top: 14px; }
 
   .span2 { grid-column: 1 / -1; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .actions > * { min-height: 44px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px; font-size: 14px; cursor: pointer; }
+  #delVeh { width: 100%; min-height: 44px; }
   .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 10px; }
   .bar > div { height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
   .bar.pace > div { background: var(--warn); }
@@ -142,14 +162,15 @@
   .bad { color: var(--danger); font-weight: 600; }
   .warnt { color: var(--warn); font-weight: 600; }
   .goodt { color: var(--good); font-weight: 600; }
-  .hero .foot .next { color: var(--text); margin-top: 3px; }
-  .hero .foot .next b { color: var(--accent); }
   .vehbtn { border: 0; background: none; color: var(--text); font: inherit; font-size: 19px; font-weight: 700; padding: 4px 6px 4px 0;
     display: flex; align-items: center; gap: 8px; cursor: pointer; max-width: 100%; }
   .vehbtn svg { width: 18px; height: 18px; color: var(--muted); flex: none; }
   .vehbtn img { width: 26px; height: 26px; border-radius: 7px; }
   .top h1 .sub { font-size: 14px; color: var(--muted); font-weight: 500; }
   #vehDlg { width: min(92vw, 380px); }
+  @media (max-width: 600px) { /* bottom sheet on phones: easy to reach with a thumb */
+    #vehDlg { margin: auto 0 0; width: 100%; max-width: 100%; border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+  }
   #vehList button { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; border-radius: 0;
     border-bottom: 1px solid var(--line); padding: 14px; background: none; text-align: left; }
   #vehList button span { color: var(--muted); font-size: 13px; }
@@ -172,17 +193,21 @@
   .front .m { color: var(--muted); font-size: 13px; }
   .front .amt { text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; }
   .front .eff { text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--accent); }
-  .rcpt { border: 0; background: none; padding: 0 2px; font-size: 14px; line-height: 1; cursor: zoom-in; }
+  .rcpt { border: 0; background: none; padding: 6px; margin: -6px -2px; font-size: 15px; line-height: 1; cursor: zoom-in; }
+  .front .t { flex-wrap: wrap; min-width: 0; }
+  .front .m { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pill { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 500; }
   .pill.w { background: transparent; border: 1px solid var(--line); color: var(--muted); }
 
   /* toast + dialog */
   .toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text); color: var(--bg);
-    padding: 10px 16px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; white-space: nowrap; }
-  body.adding .toast { bottom: 90px; }
+    padding: 8px 8px 8px 16px; min-height: 44px; border-radius: 12px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20;
+    display: flex; align-items: center; gap: 8px; width: max-content; max-width: calc(100vw - 32px); }
+  .toast:not(.action) { padding-right: 16px; }
+  body.sub .toast { bottom: calc(88px + env(safe-area-inset-bottom)); }
   .toast.show { opacity: 1; }
   .toast.action { pointer-events: auto; }
-  .toast button { margin-left: 12px; padding: 2px 10px; background: transparent; color: inherit; border-color: currentColor; font-weight: 600; }
+  .toast button { margin-left: auto; padding: 6px 12px; min-height: 32px; flex: none; background: transparent; color: inherit; border-color: currentColor; font-weight: 600; }
   dialog { border: 0; padding: 0; border-radius: 14px; max-width: min(92vw, 560px); max-height: 90vh; background: var(--card); color: var(--text); }
   dialog::backdrop { background: rgba(0,0,0,.6); }
   dialog img { display: block; max-width: 100%; max-height: calc(90vh - 56px); margin: 0 auto; }
@@ -215,21 +240,23 @@
 
     <div id="homeContent">
       <div class="card hero">
-        <div><div class="k" id="heroMonthLabel">Spent this month</div><div class="v" id="heroSpent"></div><div class="s" id="heroSpentSub"></div><div id="budget"></div></div>
-        <div><div class="k">Average consumption</div><div class="v" id="heroEff"></div><div class="s" id="heroEffSub"></div></div>
+        <div class="col"><div class="k" id="heroMonthLabel">Spent this month</div><div class="v" id="heroSpent"></div><div class="s" id="heroSpentSub"></div></div>
+        <div class="col"><div class="k">Avg consumption</div><div class="v" id="heroEff"></div><div class="s" id="heroEffSub"></div></div>
+        <div class="budget" id="budget"></div>
         <div class="foot" id="heroFoot"></div>
       </div>
 
       <div class="card">
         <div class="chips" role="group" aria-label="Period" id="periodChips">
-          <button data-p="month">Month</button><button data-p="3m">3 months</button><button data-p="year">Year</button><button data-p="all">All time</button>
+          <button data-p="month">Month</button><button data-p="3m">3 months</button><button data-p="year">Year</button><button data-p="all">All</button>
         </div>
         <div class="mini" id="miniStats"></div>
+        <div class="tabs" role="tablist" aria-label="Chart" id="chartTabs">
+          <button role="tab" data-c="spend">Spending</button><button role="tab" data-c="price">Price / L</button><button role="tab" data-c="eff" id="effTab">km/L</button>
+        </div>
+        <div class="hint" id="chartNote"></div>
+        <div class="chart" id="chart"></div>
       </div>
-
-      <div class="card"><h2>Spent per month</h2><div class="chart" id="chartSpend"></div></div>
-      <div class="card"><h2 id="priceTitle">Price per litre</h2><div class="hint" id="priceNote" style="margin:-6px 0 8px"></div><div class="chart" id="chartPrice"></div></div>
-      <div class="card"><h2 id="effTitle">Consumption per fill-up</h2><div class="chart" id="chartEff"></div></div>
     </div>
   </section>
 
@@ -327,12 +354,12 @@
     <div class="card">
       <h2>Data</h2>
       <div class="hint" style="margin:-6px 0 12px">Everything is saved on this device only. Export a backup now and then (receipt photos are not included).</div>
-      <div class="row">
+      <div class="actions">
         <button id="expJson">Export backup</button>
-        <button id="expCsv">Export CSV</button>
         <label class="btn" style="margin:0;color:inherit">Import backup<input id="impJson" type="file" accept="application/json,.json" hidden></label>
-        <button id="loadDemo">Load sample data</button>
-        <button id="wipe" class="danger">Delete all data</button>
+        <button id="expCsv">Export CSV</button>
+        <button id="loadDemo">Sample data</button>
+        <button id="wipe" class="danger span2">Delete all data</button>
       </div>
     </div>
   </section>
@@ -443,14 +470,14 @@
     view = v;
     ['home', 'history', 'add', 'settings'].forEach(n => $('#view-' + n).hidden = n !== v);
     $$('.bottom .nav').forEach(b => b.dataset.go === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
-    document.body.classList.toggle('adding', v === 'add');
+    document.body.classList.toggle('sub', v === 'add' || v === 'settings');
     const sub = v === 'add' || v === 'settings';
     $('#backBtn').hidden = !sub; $('#gearBtn').hidden = sub;
     renderTitle();
     if (v === 'home') renderHome();
     if (v === 'history') renderHistory();
     if (v === 'settings') renderSettings();
-    if (push) history.pushState({ v }, '');
+    if (push) history.pushState({ v, d: ++depth }, '');
     window.scrollTo(0, 0);
   }
   function renderTitle() {
@@ -478,15 +505,18 @@
   });
   vehDlg.onclick = e => { if (e.target === vehDlg) vehDlg.close(); };
   $('#vehManage').onclick = () => { vehDlg.close(); go('settings'); };
-  window.addEventListener('popstate', e => go(e.state?.v || 'home', false));
-  history.replaceState({ v: 'home' }, '');
+  // depth = how many screens this page has pushed, so Back never jumps to a stale entry from before a reload
+  let depth = 0;
+  const back = () => depth > 0 ? history.back() : go('home');
+  window.addEventListener('popstate', e => { depth = e.state?.d || 0; go(e.state?.v || 'home', false); });
+  history.replaceState({ v: 'home', d: 0 }, '');
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-go]'); if (!b) return;
     if (b.dataset.go === 'add') { resetForm(); $('#savedNote').hidden = true; }
     go(b.dataset.go);
   });
   $('#gearBtn').onclick = () => go('settings');
-  $('#backBtn').onclick = () => history.state?.v && history.length > 1 ? history.back() : go('home');
+  $('#backBtn').onclick = () => back();
 
   /* ---------- fill-up form ---------- */
   const F = id => $('#f-' + id);
@@ -566,7 +596,7 @@
     odoHint(); moreSummary();
     go('add');
   }
-  $('#delBtn').onclick = () => { const id = F('id').value; history.back(); setTimeout(() => deleteEntry(id), 50); };
+  $('#delBtn').onclick = () => { const id = F('id').value; back(); setTimeout(() => deleteEntry(id), 50); };
   $('#receiptThumb').onclick = () => showReceipt($('#receiptThumb').src, 'Receipt');
 
   $('#entryForm').onsubmit = async e => {
@@ -595,9 +625,9 @@
     save(KEY, entries);
     const v = settings.vehicles.find(v => v.id === entry.vehicleId);
     if (v) { v.lastType = entry.type; v.lastStation = entry.station; saveSettings(); }
-    if (old) { history.back(); toast('Fill-up updated'); return; }
+    if (old) { back(); toast('Fill-up updated'); return; }
     showSavedNote(entry);
-    history.replaceState({ v: 'home' }, ''); view = 'add'; go('home', false);
+    history.replaceState({ v: 'home', d: depth }, ''); view = 'add'; go('home', false);
   };
 
   function showSavedNote(entry) {
@@ -773,30 +803,30 @@
     $('#emptyTitle').textContent = settings.vehicles.length > 1 ? `No fill-ups for ${veh().name} yet` : 'No fill-ups yet';
     if (!has) return;
     const s = sorted(), L = legs(), now = new Date();
-    const mk = today().slice(0, 7), pm = new Date(now.getFullYear(), now.getMonth() - 1, 1), pmk = localISO(pm).slice(0, 7);
+    const mk = today().slice(0, 7), pmk = localISO(new Date(now.getFullYear(), now.getMonth() - 1, 1)).slice(0, 7);
     const monthEntries = s.filter(x => x.date.startsWith(mk));
     const spent = monthEntries.reduce((a, x) => a + x.total, 0), lastMonth = s.filter(x => x.date.startsWith(pmk)).reduce((a, x) => a + x.total, 0);
-    $('#heroMonthLabel').textContent = 'Spent in ' + now.toLocaleDateString('en-MY', { month: 'long' });
+    const n = monthEntries.length;
+    $('#heroMonthLabel').textContent = 'Spent in ' + now.toLocaleDateString('en-MY', { month: 'short' });
     $('#heroSpent').innerHTML = '<small>RM</small> ' + num(spent, 2);
-    $('#heroSpentSub').textContent = `${monthEntries.length} fill-up${monthEntries.length === 1 ? '' : 's'}` + (lastMonth ? ` · RM ${num(lastMonth, 2)} last month` : '');
+    $('#heroSpentSub').textContent = lastMonth ? `RM ${num(lastMonth, 0)} last month` : `${n} fill-up${n === 1 ? '' : 's'}`;
     const avg = avgOf(L), [ev, eu] = effParts(avg);
     $('#heroEff').innerHTML = avg ? `${ev} <small>${eu}</small>` : '–';
-    $('#heroEffSub').textContent = L.length ? 'Last tank: ' + effText(L.at(-1).kmpl) : 'Needs 2 full-tank fill-ups';
-    const last = s.at(-1);
-    const nf = nextFill(s, L);
-    $('#heroFoot').innerHTML = `Last isi minyak ${daysAgo(last.date)} · ${num(last.odo, 0)} km · ${rm(last.total)}` +
-      (nf ? `<div class="next">${nf}</div>` : '');
+    $('#heroEffSub').textContent = L.length ? 'Last tank ' + effText(L.at(-1).kmpl) : 'After 2 full tanks';
 
-    // monthly budget
+    // monthly budget: one full-width line under the two numbers
     const budget = +veh().budget || 0, bEl = $('#budget');
     if (budget) {
       const day = now.getDate(), dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       const pace = day >= 5 ? spent / day * dim : null, pct = Math.min(100, spent / budget * 100);
       const over = spent > budget, warn = !over && pace && pace > budget * 1.05;
       bEl.innerHTML = `<div class="bar ${over ? 'over' : warn ? 'pace' : ''}" role="progressbar" aria-valuenow="${Math.round(spent)}" aria-valuemin="0" aria-valuemax="${budget}" aria-label="Monthly budget used"><div style="width:${pct}%"></div></div>
-        <div class="s">${over ? `<b class="bad">RM ${num(spent - budget, 2)} over</b> budget of RM ${num(budget, 0)}`
-          : `RM ${num(budget - spent, 2)} left of RM ${num(budget, 0)}`}${warn ? ` · <b class="warnt">on pace for RM ${num(pace, 0)}</b>` : ''}</div>`;
-    } else bEl.innerHTML = '<button class="link" id="setBudget" style="font-size:12.5px;margin-top:4px">Set a monthly budget</button>';
+        <div class="row2"><span>${over ? `<b class="bad">RM ${num(spent - budget, 0)} over budget</b>` : warn ? `<b class="warnt">On pace for RM ${num(pace, 0)}</b>` : `RM ${num(budget - spent, 0)} left`}</span><span>Budget RM ${num(budget, 0)}</span></div>`;
+    } else bEl.innerHTML = '';
+
+    const last = s.at(-1), nf = nextFill(s, L);
+    $('#heroFoot').innerHTML = (nf ? `<div class="next">${nf}</div>` : '') +
+      `<div>Last filled ${daysAgo(last.date)} at ${num(last.odo, 0)} km</div>`;
 
     // period overview
     const p = settings.period;
@@ -804,47 +834,50 @@
     const ps = s.filter(x => inPeriod(x.date, p)), pL = L.filter(x => inPeriod(x.date, p));
     const pSpent = ps.reduce((a, x) => a + x.total, 0), pLitres = ps.reduce((a, x) => a + x.litres, 0);
     const pAvg = avgOf(pL), avgPrice = pLitres ? pSpent / pLitres : null, rmKm = pAvg && avgPrice ? avgPrice / pAvg : null;
-    const dist = pL.reduce((a, x) => a + x.km, 0);
     const best = pL.length ? Math.max(...pL.map(x => x.kmpl)) : null, worst = pL.length ? Math.min(...pL.map(x => x.kmpl)) : null;
+    const [bv] = effParts(best), [wv] = effParts(worst);
     const mini = [
       ['Spent', rm(pSpent), `${ps.length} fill-up${ps.length === 1 ? '' : 's'}`],
-      ['Fuel bought', num(pLitres, 1) + ' L', avgPrice ? 'avg RM ' + num(avgPrice, 2) + '/L' : ''],
-      ['Cost per km', rmKm ? 'RM ' + num(rmKm, 2) : '–', rmKm ? 'RM ' + num(rmKm * 100, 0) + ' per 100 km' : ''],
-      ['Consumption', effText(pAvg), pL.length > 1 ? `${effText(best)} best · ${effText(worst)} worst` : (dist ? num(dist, 0) + ' km tracked' : '')],
+      ['Fuel', num(pLitres, 1) + ' L', avgPrice ? 'avg RM ' + num(avgPrice, 2) + '/L' : ''],
+      ['Cost per km', rmKm ? 'RM ' + num(rmKm, 2) : '–', rmKm ? 'RM ' + num(rmKm * 100, 0) + ' / 100 km' : ''],
+      ['Consumption', effText(pAvg), pL.length > 1 ? `best ${bv} · worst ${wv}` : ''],
     ];
     $('#miniStats').innerHTML = ps.length ? mini.map(([k, v, sub]) => `<div><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`).join('')
       : '<div class="hint" style="grid-column:1/-1">No fill-ups in this period.</div>';
 
-    const byMonth = {};
-    ps.forEach(x => { const k = x.date.slice(0, 7); byMonth[k] = (byMonth[k] || 0) + x.total; });
-    const months = Object.keys(byMonth).sort().slice(-12);
-    $('#chartSpend').innerHTML = months.length ? barChart(months.map(m => ({
-      label: new Date(m + '-01T00:00').toLocaleDateString('en-MY', { month: 'short' }), value: byMonth[m], tip: rm(byMonth[m])
-    }))) : '<div class="hint">No data in this period.</div>';
-
-    $('#effTitle').textContent = 'Consumption per fill-up (' + (settings.unit === 'l100' ? 'L/100km' : 'km/L') + ')';
-    const pts = pL.slice(-20);
-    $('#chartEff').innerHTML = pts.length ? lineChart(pts.map(x => ({
-      label: new Date(x.date + 'T00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }),
-      value: settings.unit === 'l100' ? 100 / x.kmpl : x.kmpl
-    }))) : '<div class="hint">Shows after two fill-ups with odometer readings.</div>';
-
-    // price per litre trend (latest fuel type only, so RON95 and RON97 don't mix)
-    const ftype = last.type, pp = ps.filter(x => x.type === ftype && x.price > 0).slice(-24);
-    $('#priceTitle').textContent = `Price per litre (${ftype})`;
-    if (pp.length >= 2) {
-      const first = pp[0].price, latest = pp.at(-1).price, avgP = pp.reduce((a, x) => a + x.price, 0) / pp.length;
-      const ch = (latest / first - 1) * 100;
-      $('#priceNote').innerHTML = `Latest <b>RM ${num(latest, 2)}</b> · avg RM ${num(avgP, 2)} · ` +
-        (Math.abs(ch) < 0.5 ? 'no change' : `<b class="${ch > 0 ? 'bad' : 'goodt'}">${ch > 0 ? '▲' : '▼'} ${num(Math.abs(ch), 1)}%</b>`) + ' since ' + fmtDate(pp[0].date);
-      $('#chartPrice').innerHTML = lineChart(pp.map(x => ({
-        label: new Date(x.date + 'T00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }), value: x.price
-      })), 2, 'Price per litre');
+    // one chart at a time, picked with the tabs
+    const c = settings.chart || 'spend', box = $('#chart'), W = Math.max(260, box.clientWidth || 300);
+    $('#effTab').textContent = settings.unit === 'l100' ? 'L/100km' : 'km/L';
+    $$('#chartTabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.c === c));
+    const dLabel = d => new Date(d + 'T00:00').toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+    let note = '', html = '';
+    if (c === 'spend') {
+      const byMonth = {};
+      ps.forEach(x => { const k = x.date.slice(0, 7); byMonth[k] = (byMonth[k] || 0) + x.total; });
+      const months = Object.keys(byMonth).sort().slice(-Math.min(12, Math.floor(W / 42)));
+      note = 'RM spent per month';
+      html = months.length ? barChart(months.map(m => ({
+        label: new Date(m + '-01T00:00').toLocaleDateString('en-MY', { month: 'short' }), value: byMonth[m], tip: rm(byMonth[m])
+      })), W) : '';
+    } else if (c === 'price') {
+      const ftype = last.type, pp = ps.filter(x => x.type === ftype && x.price > 0).slice(-24);
+      if (pp.length >= 2) {
+        const latest = pp.at(-1).price, ch = (latest / pp[0].price - 1) * 100;
+        note = `${ftype} now <b>RM ${num(latest, 2)}</b> · ` + (Math.abs(ch) < 0.5 ? 'no change' :
+          `<b class="${ch > 0 ? 'bad' : 'goodt'}">${ch > 0 ? '▲' : '▼'} ${num(Math.abs(ch), 1)}%</b> since ${dLabel(pp[0].date)}`);
+        html = lineChart(pp.map(x => ({ label: dLabel(x.date), value: x.price })), W, 2, 'Price per litre');
+      } else note = `${ftype} price per litre`;
     } else {
-      $('#priceNote').textContent = '';
-      $('#chartPrice').innerHTML = '<div class="hint">Shows after two fill-ups of the same fuel in this period.</div>';
+      const pts = pL.slice(-20);
+      note = 'Per fill-up · dashed line is your average';
+      html = pts.length ? lineChart(pts.map(x => ({ label: dLabel(x.date), value: settings.unit === 'l100' ? 100 / x.kmpl : x.kmpl })), W) : '';
     }
+    $('#chartNote').innerHTML = note;
+    box.innerHTML = html || '<div class="hint">Not enough fill-ups in this period yet.</div>';
   }
+  $('#chartTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; settings.chart = b.dataset.c; saveSettings(); renderHome(); };
+  let lastW = innerWidth;
+  addEventListener('resize', () => { if (Math.abs(innerWidth - lastW) > 20 && view === 'home') { lastW = innerWidth; renderHome(); } });
 
   // Estimate fuel left and when the next fill-up is likely, from driving pace and the usual refill level.
   function nextFill(s, L) {
@@ -858,7 +891,7 @@
     const when = days => {
       if (days <= 0.5) return '<b>due now</b>';
       const d = new Date(); d.setDate(d.getDate() + Math.round(days));
-      return 'around <b>' + d.toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short' }) + '</b>';
+      return '<b>' + d.toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short' }) + '</b>';
     };
     const avg = avgOf(L.slice(-5));
     if (tank && avg && last.after != null && kmPerDay > 0) {
@@ -867,41 +900,42 @@
       const kmSince = kmPerDay * daysSince;
       const left = Math.max(0, last.after / 100 * tank * avg - kmSince);
       const toRefill = (last.after - refillAt) / 100 * tank * avg - kmSince;
-      return `≈ <b>${num(left, 0)} km</b> left in the tank · next isi minyak ${when(toRefill / kmPerDay)}`;
+      return `≈ <b>${num(left, 0)} km</b> left · next fill ${when(toRefill / kmPerDay)}`;
     }
     // No tank size: fall back to how often you usually fill up.
     const gaps = s.slice(-7).map((x, i, a) => i ? (new Date(x.date) - new Date(a[i - 1].date)) / 864e5 : null).filter(g => g > 0);
     if (!gaps.length) return '';
     const every = gaps.reduce((a, b) => a + b, 0) / gaps.length;
-    return `Next isi minyak ${when(every - daysSince)} (you fill up every ~${Math.round(every)} days)`;
+    return `Next fill ${when(every - daysSince)} · every ~${Math.round(every)} days`;
   }
 
-  function barChart(data) {
-    const W = 600, H = 190, P = { l: 8, r: 8, t: 22, b: 24 }, max = Math.max(...data.map(d => d.value)) || 1;
-    const bw = Math.min(70, (W - P.l - P.r) / data.length), gap = Math.min(16, bw * 0.3);
+  // Charts are drawn at the real on-screen width so text stays a readable 11px on phones.
+  function barChart(data, W) {
+    const H = 170, P = { l: 4, r: 4, t: 20, b: 22 }, max = Math.max(...data.map(d => d.value)) || 1;
+    const bw = Math.min(56, (W - P.l - P.r) / data.length), gap = Math.max(6, bw * 0.28);
     const x0 = P.l + ((W - P.l - P.r) - bw * data.length) / 2;
     const bars = data.map((d, i) => {
-      const h = (H - P.t - P.b) * d.value / max, x = x0 + i * bw + gap / 2, y = H - P.b - h;
+      const h = Math.max(2, (H - P.t - P.b) * d.value / max), x = x0 + i * bw + gap / 2, y = H - P.b - h, cx = x + (bw - gap) / 2;
       return `<rect x="${x}" y="${y}" width="${bw - gap}" height="${h}" rx="4" fill="var(--accent)"><title>${d.tip}</title></rect>
-        <text x="${x + (bw - gap) / 2}" y="${y - 6}" text-anchor="middle">${Math.round(d.value)}</text>
-        <text x="${x + (bw - gap) / 2}" y="${H - 6}" text-anchor="middle">${d.label}</text>`;
+        <text x="${cx}" y="${y - 6}" text-anchor="middle">${Math.round(d.value)}</text>
+        <text x="${cx}" y="${H - 6}" text-anchor="middle">${d.label}</text>`;
     }).join('');
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Spent per month"><line x1="${P.l}" x2="${W - P.r}" y1="${H - P.b}" y2="${H - P.b}" stroke="var(--line)"/>${bars}</svg>`;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Spent per month"><line x1="${P.l}" x2="${W - P.r}" y1="${H - P.b}" y2="${H - P.b}" stroke="var(--line)"/>${bars}</svg>`;
   }
-  function lineChart(data, dec = 0, label = 'Consumption per fill-up') {
-    const W = 600, H = 190, P = { l: dec ? 42 : 34, r: 12, t: 16, b: 24 };
+  function lineChart(data, W, dec = 0, label = 'Consumption per fill-up') {
+    const H = 170, P = { l: dec ? 36 : 26, r: 10, t: 12, b: 22 };
     const vals = data.map(d => d.value), mn = Math.min(...vals), mx = Math.max(...vals);
     const span = (mx - mn) || mx * 0.05 || 1, lo = Math.max(0, mn - span * 0.3), hi = mx + span * 0.3;
-    const X = i => data.length === 1 ? (W + P.l - P.r) / 2 : P.l + i * (W - P.l - P.r) / (data.length - 1);
+    const X = i => data.length === 1 ? (W + P.l - P.r) / 2 : P.l + 8 + i * (W - P.l - P.r - 16) / (data.length - 1);
     const Y = v => H - P.b - (v - lo) / (hi - lo || 1) * (H - P.t - P.b);
     const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
     const path = data.map((d, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(d.value).toFixed(1)).join(' ');
-    const step = Math.ceil(data.length / 7);
-    const grid = [lo, (lo + hi) / 2, hi].map(v => `<line x1="${P.l}" x2="${W - P.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${P.l - 6}" y="${Y(v) + 4}" text-anchor="end">${num(v, dec)}</text>`).join('');
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}">${grid}
+    const step = Math.ceil(data.length / Math.max(2, Math.floor((W - P.l) / 64)));
+    const grid = [lo, (lo + hi) / 2, hi].map(v => `<line x1="${P.l}" x2="${W - P.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${P.l - 5}" y="${Y(v) + 4}" text-anchor="end">${num(v, dec)}</text>`).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${label}">${grid}
       <line x1="${P.l}" x2="${W - P.r}" y1="${Y(avg)}" y2="${Y(avg)}" stroke="var(--accent)" stroke-dasharray="4 4" opacity=".5"/>
       <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
-      ${data.map((d, i) => `<circle cx="${X(i)}" cy="${Y(d.value)}" r="4" fill="var(--card)" stroke="var(--accent)" stroke-width="2"><title>${d.label}: ${num(d.value, dec ? 3 : 1)}</title></circle>`).join('')}
+      ${data.map((d, i) => `<circle cx="${X(i)}" cy="${Y(d.value)}" r="${data.length > 14 ? 3 : 4}" fill="var(--card)" stroke="var(--accent)" stroke-width="2"><title>${d.label}: ${num(d.value, dec ? 3 : 1)}</title></circle>`).join('')}
       ${data.map((d, i) => i % step ? '' : `<text x="${X(i)}" y="${H - 6}" text-anchor="middle">${d.label}</text>`).join('')}
     </svg>`;
   }
@@ -1014,7 +1048,6 @@
     settings.vehicles = settings.vehicles.filter(x => x.id !== v.id);
     switchVehicle(settings.vehicles[0].id); tidyPhotos(); toast('Vehicle deleted');
   };
-  document.addEventListener('click', e => { if (e.target.closest('#setBudget')) { go('settings'); setTimeout(() => $('#s-budget').focus(), 50); } });
 
   const download = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); };
   $('#expJson').onclick = () => download(`fuel-log-${today()}.json`, JSON.stringify({ settings, entries }, null, 1), 'application/json');
