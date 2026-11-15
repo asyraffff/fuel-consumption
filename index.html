@@ -159,10 +159,18 @@
   .trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .trio input { padding: 10px 8px; font-variant-numeric: tabular-nums; }
   .odo input { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .seg { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-  .seg button { border: 0; border-radius: 0; padding: 12px 0; font-size: 16px; font-weight: 600; background: var(--bg); color: var(--text); }
-  .seg button + button { border-left: 1px solid var(--line); }
-  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+  /* Fuel gauge picker: the same marks as the dashboard gauge (long at 0, ½, 1; medium at ¼, ¾; short in between) */
+  .meter { display: grid; grid-template-columns: repeat(var(--n, 9), 1fr); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
+  .meter button { border: 0; background: none; padding: 6px 0 4px; min-height: 54px; min-width: 0; border-radius: 8px;
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+  .meter .tk { width: 4px; height: 12px; border-radius: 2px; background: var(--tick); }
+  .meter .tk.m { height: 19px; }
+  .meter .tk.l { height: 26px; }
+  .meter .lb { font-size: 12px; font-weight: 700; color: var(--muted); line-height: 1; min-height: 12px; }
+  .meter button.on .tk { background: var(--accent); }
+  .meter button.cur { background: var(--accent-soft); }
+  .meter button.cur .tk { background: var(--needle); width: 5px; }
+  .meter button.cur .lb { color: var(--text); }
   .glabel { display: flex; justify-content: space-between; align-items: baseline; }
   .glabel span { font-size: 12.5px; color: var(--muted); }
   .glabel span.warn { color: var(--warn); }
@@ -333,16 +341,13 @@
       </div>
 
       <div class="field">
-        <div class="glabel"><label>Fuel gauge before</label><span id="h-before"></span></div>
-        <div class="seg" data-g="before" role="group" aria-label="Fuel gauge before filling">
-          <button type="button" data-v="0">E</button><button type="button" data-v="25">¼</button><button type="button" data-v="50">½</button><button type="button" data-v="75">¾</button><button type="button" data-v="100">F</button>
-        </div>
+        <div class="glabel"><label id="l-before">Fuel gauge before</label><span id="h-before"></span></div>
+        <div class="meter" data-g="before" role="radiogroup" aria-labelledby="l-before"></div>
+        <div class="hint" id="meterHint">Tap the mark your fuel needle points to, same as on your dashboard.</div>
       </div>
       <div class="field">
-        <div class="glabel"><label>Fuel gauge after</label><span id="h-after"></span></div>
-        <div class="seg" data-g="after" role="group" aria-label="Fuel gauge after filling">
-          <button type="button" data-v="0">E</button><button type="button" data-v="25">¼</button><button type="button" data-v="50">½</button><button type="button" data-v="75">¾</button><button type="button" data-v="100">F</button>
-        </div>
+        <div class="glabel"><label id="l-after">Fuel gauge after</label><span id="h-after"></span></div>
+        <div class="meter" data-g="after" role="radiogroup" aria-labelledby="l-after"></div>
       </div>
 
       <details class="more" id="more">
@@ -374,6 +379,9 @@
         <div class="span2"><label for="s-name">Name</label><input id="s-name" type="text" maxlength="40" placeholder="e.g. Myvi"></div>
         <div><label for="s-tank">Tank capacity (L)</label><input id="s-tank" type="number" inputmode="decimal" step="0.5" min="0" placeholder="e.g. 40"></div>
         <div><label for="s-budget">Monthly budget (RM)</label><input id="s-budget" type="number" inputmode="decimal" step="10" min="0" placeholder="e.g. 300"></div>
+        <div class="span2"><label for="s-steps">Fuel gauge steps, empty to full</label>
+          <select id="s-steps"><option value="4">4 steps</option><option value="6">6 steps</option><option value="8">8 steps</option><option value="10">10 steps</option><option value="12">12 steps</option></select>
+          <div class="hint">Count the gaps between the marks on your dashboard's fuel gauge, from 0 to 1.</div></div>
       </div>
       <div class="hint">Tank capacity lets the app use your gauge readings (so partial fills still count) and estimate the range left.</div>
       <button id="delVeh" class="danger" style="margin-top:12px">Delete this vehicle</button>
@@ -557,18 +565,36 @@
   /* ---------- fill-up form ---------- */
   const F = id => $('#f-' + id);
   const gauge = { before: null, after: 100 };
-  const near = v => Math.round(v / 25) * 25;
+  // Gauge readings are stored as a percentage; the picker shows the vehicle's own dashboard marks (8 steps by default).
+  const steps = () => +veh().gaugeSteps || 8;
+  const toIdx = v => Math.round(v / 100 * steps());
+  const tickKind = (i, n) => (i === 0 || i === n || 2 * i === n) ? 'l' : (n % 4 === 0 && (4 * i === n || 4 * i === 3 * n)) ? 'm' : '';
+  function buildMeters() {
+    const n = steps();
+    $$('.meter').forEach(m => {
+      m.style.setProperty('--n', n + 1);
+      m.innerHTML = Array.from({ length: n + 1 }, (_, i) =>
+        `<button type="button" role="radio" data-i="${i}" aria-label="${i === 0 ? 'Empty, 0' : i === n ? 'Full, 1' : `${i} of ${n} marks`}">` +
+        `<span class="tk ${tickKind(i, n)}"></span><span class="lb">${i === 0 ? '0' : i === n ? '1' : 2 * i === n ? '½' : ''}</span></button>`).join('');
+    });
+    setGauge('before', gauge.before); setGauge('after', gauge.after);
+  }
   function setGauge(k, v) {
     gauge[k] = v;
-    $$(`.seg[data-g="${k}"] button`).forEach(b => b.setAttribute('aria-pressed', v != null && near(v) === +b.dataset.v));
+    const n = steps(), idx = v == null ? null : toIdx(v);
+    $$(`.meter[data-g="${k}"] button`).forEach(b => {
+      const i = +b.dataset.i;
+      b.classList.toggle('on', idx != null && i <= idx); b.classList.toggle('cur', i === idx); b.setAttribute('aria-checked', i === idx);
+    });
     const h = $('#h-' + k);
     h.className = v == null && k === 'before' ? 'warn' : '';
-    h.textContent = v == null ? 'Not recorded' : k === 'after' && v === 100 ? 'Full tank' : v % 25 ? v + '%' : '';
+    h.textContent = v == null ? 'Not recorded' : idx === n ? 'Full' : idx === 0 ? 'Empty' : `${idx} of ${n} marks`;
+    if (k === 'before') $('#meterHint').hidden = v != null;
   }
-  $$('.seg').forEach(seg => seg.onclick = e => {
+  $$('.meter').forEach(m => m.onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
-    const k = seg.dataset.g, v = +b.dataset.v;
-    setGauge(k, gauge[k] != null && near(gauge[k]) === v ? null : v); // tap again to clear
+    const k = m.dataset.g, i = +b.dataset.i;
+    setGauge(k, gauge[k] != null && toIdx(gauge[k]) === i ? null : Math.round(i / steps() * 1000) / 10); // tap again to clear
   });
 
   // fill any two of total / litres / price
@@ -610,7 +636,7 @@
     $('#entryForm').reset();
     F('id').value = ''; F('date').value = today(); F('missed').checked = false;
     F('type').value = veh().lastType || 'RON95'; F('station').value = veh().lastStation || '';
-    setGauge('before', null); setGauge('after', 100);
+    gauge.before = null; gauge.after = 100; buildMeters();
     lastEdited = []; pendingThumb = null;
     $('#scanRes').hidden = true; $('#ocrRawWrap').hidden = true; $('#ocrStatus').textContent = ''; $('#scanLabel').textContent = 'Scan receipt';
     $('#delBtn').hidden = true; $('#saveBtn').textContent = 'Save'; $('#more').open = false;
@@ -948,22 +974,24 @@
     return { when: when(every - daysSince), every: Math.round(every) };
   }
 
-  // Small fuel gauge dial like the one on a car dashboard: needle sweeps from E (left) to F (right), red zone near empty.
+  // Small fuel gauge dial like the one on the dashboard: needle sweeps from 0 (left) to 1 (right),
+  // with the same marks as the vehicle's gauge and a red zone in the last step.
   function fuelGauge(level) {
-    const cx = 52, cy = 54, r = 42;
+    const cx = 52, cy = 54, r = 42, n = steps(), red = 1 / n;
     const pt = (f, rr) => { const a = Math.PI * (1 - f); return [cx + rr * Math.cos(a), cy - rr * Math.sin(a)]; };
     const arc = (f0, f1, rr) => { const [x0, y0] = pt(f0, rr), [x1, y1] = pt(f1, rr); return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${rr} ${rr} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
-    const ticks = [0, .25, .5, .75, 1].map(f => {
-      const major = f % .5 === 0, [x0, y0] = pt(f, r - (major ? 9 : 6)), [x1, y1] = pt(f, r - 1);
-      return `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="var(--tick)" stroke-width="${major ? 2.2 : 1.5}" stroke-linecap="round"/>`;
+    const ticks = Array.from({ length: n + 1 }, (_, i) => {
+      const kind = tickKind(i, n), len = kind === 'l' ? 10 : kind === 'm' ? 7 : 4.5, f = i / n;
+      const [x0, y0] = pt(f, r - len), [x1, y1] = pt(f, r - 1);
+      return `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="var(--tick)" stroke-width="${kind === 'l' ? 2.2 : 1.4}" stroke-linecap="round"/>`;
     }).join('');
-    const [nx, ny] = pt(level, r - 11), low = level <= .125;
+    const [nx, ny] = pt(level, r - 11), low = level <= red;
     return `<svg class="fuelgauge" viewBox="0 0 104 64" role="img" aria-label="Estimated fuel left: about ${Math.round(level * 100)}%">
       <path d="${arc(0, 1, r)}" fill="none" stroke="var(--line)" stroke-width="4" stroke-linecap="round"/>
-      <path d="${arc(0, .125, r)}" fill="none" stroke="var(--danger)" stroke-width="4" stroke-linecap="round"/>
-      ${level > .13 ? `<path d="${arc(.125, level, r)}" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>` : ''}
+      <path d="${arc(0, red, r)}" fill="none" stroke="var(--danger)" stroke-width="4" stroke-linecap="round"/>
+      ${level > red + .01 ? `<path d="${arc(red, level, r)}" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>` : ''}
       ${ticks}
-      <text x="4" y="63">E</text><text x="100" y="63" text-anchor="end">F</text>
+      <text x="6" y="63">0</text><text x="98" y="63" text-anchor="end">1</text>
       <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${low ? 'var(--danger)' : 'var(--needle)'}" stroke-width="2.6" stroke-linecap="round"/>
       <circle cx="${cx}" cy="${cy}" r="4.5" fill="var(--card)" stroke="var(--needle)" stroke-width="2"/>
     </svg>`;
@@ -1102,7 +1130,7 @@
     const v = veh();
     $('#s-veh').innerHTML = settings.vehicles.map(x => `<option value="${x.id}"${x.id === v.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('');
     $('#s-vehRow').hidden = settings.vehicles.length < 2;
-    $('#s-name').value = v.name; $('#s-tank').value = v.tank; $('#s-budget').value = v.budget;
+    $('#s-name').value = v.name; $('#s-tank').value = v.tank; $('#s-budget').value = v.budget; $('#s-steps').value = String(steps());
     $('#delVeh').hidden = settings.vehicles.length < 2;
     $('#s-unit').value = settings.unit;
   }
@@ -1110,6 +1138,7 @@
   $('#s-name').oninput = () => { veh().name = $('#s-name').value.trim() || 'Vehicle'; saveSettings(); $('#s-veh').selectedOptions[0].textContent = veh().name; };
   $('#s-tank').oninput = () => { veh().tank = $('#s-tank').value; saveSettings(); };
   $('#s-budget').oninput = () => { veh().budget = $('#s-budget').value; saveSettings(); };
+  $('#s-steps').onchange = () => { veh().gaugeSteps = +$('#s-steps').value; saveSettings(); buildMeters(); };
   $('#s-unit').onchange = () => { settings.unit = $('#s-unit').value; saveSettings(); };
   $('#addVeh').onclick = () => {
     const v = newVehicle('Vehicle ' + (settings.vehicles.length + 1));

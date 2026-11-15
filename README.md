@@ -14,7 +14,7 @@ No sign-up, no server, no ads. Everything stays on your phone.
 - 📷 **Scan the receipt.** Reads the total (RM), litres, price per litre, fuel type and date. You check the values before saving.
 - Fill in any two of *total / litres / RM per litre* and the third is worked out.
 - **Odometer** with a "+420 km since your last fill-up" hint and a warning for likely typos.
-- **Fuel gauge before and after** (E ¼ ½ ¾ F), tapped from what your dashboard shows.
+- **Fuel gauge before and after.** The picker shows the same marks as your dashboard's fuel gauge (8 steps from 0 to 1 by default; set the number of steps per vehicle in Settings). Tap the mark the needle points to.
 - Date, fuel type, station and "I missed logging the previous fill-up" are folded under **More**. The last fuel type and station are remembered.
 - After saving you get one line on how that tank did, e.g. *"14.0 km/L, 19% better than your average."*
 
