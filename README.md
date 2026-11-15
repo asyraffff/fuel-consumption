@@ -18,6 +18,7 @@ No sign-up, no server, no ads. Everything stays on your phone.
 - **Fuel gauge before and after.** The picker shows the same marks as your dashboard's fuel gauge (8 steps from 0 to 1 by default; set the number of steps per vehicle in Settings). Tap the mark the needle points to.
 - **BUDI95 toggle** for RON95: fills in the subsidised price (RM 1.99/L) and shows how much of your monthly quota is left. Untick it when you're over the quota and it switches to the unsubsidised price.
 - **Range on dashboard (optional)**: the km figure beside your car's fuel gauge, before and after the fill.
+- **Petrol station search**: type e.g. *shell bangsar* to search all ~3,900 stations in Malaysia, or tap **📍 Near me** for the 5 nearest. If you've allowed location before, the station you're standing at (within 300 m) is filled in when you open the form. Searching and distances are worked out on the phone; your location is never sent anywhere. You can still type anything.
 - Date, fuel type, station and "I missed logging the previous fill-up" are folded under **More**. The last fuel type and station are remembered.
 - After saving you get one line on how that tank did, e.g. *"14.0 km/L, 19% better than your average."*
 
@@ -27,6 +28,7 @@ No sign-up, no server, no ads. Everything stays on your phone.
 - **Average consumption** (km/L or L/100 km).
 - **BUDI95 quota bar**: litres used out of your monthly quota (shared across all your vehicles) and roughly how much the subsidy saved you.
 - **Dashboard-style fuel gauge** with an estimate of **km left** and **when your next fill-up is due**. A warning appears under 60 km. Tap **Update** to enter the range (and odometer) your dashboard shows right now, and the estimate follows your car.
+- **Insights** (only when there's something to say): this week's pump price change for the fuels you use; a warning when your last 2 tanks are 15%+ worse than usual (check tyre pressure, or a service may be due); and, once you've tried both, how RON97 compares with RON95 in your car in km/L and RM per km.
 - **Coming up**: service reminders that are due within 1,000 km or 30 days, with a **Done** button. The card only appears when something is due.
 - An overview for *Month / 3 months / Year / All*: fuel spent, litres, fuel cost per km, best and worst km/L, and, once you log car costs, **car costs** and **all-in cost per km**.
 - **Share report**: turns the period you picked into an image (fuel, each type of car cost, distance, consumption, cost per km, BUDI95 saved, a per-month chart) to send on WhatsApp or keep.
@@ -80,12 +82,14 @@ The **range and next fill-up** estimates use, in order of preference: the range 
 ## Your data
 
 - Fill-ups and settings are saved in your browser's storage on **this device only**. Receipt photos are kept in the browser's IndexedDB.
-- Nothing is uploaded anywhere. Receipt scanning runs on the phone using [Tesseract.js](https://github.com/naptha/tesseract.js).
-- Clearing your browser data or uninstalling the app deletes your log, so use **Settings → Export backup** now and then. Backups don't include receipt photos.
+- Nothing is uploaded anywhere. Receipt scanning runs on the phone using [Tesseract.js](https://github.com/naptha/tesseract.js). Your location (only if you use **Near me** or allow it) stays on the phone too.
+- The app asks the browser to keep its data permanently. **Settings → Data** shows whether it agreed; installed apps usually get it.
+- Clearing your browser data or uninstalling the app still deletes your log, so use **Settings → Export backup** now and then. Tick **Include receipt photos in backups** to bring the photos along (the file gets bigger).
+- The petrol station list is from [OpenStreetMap](https://www.openstreetmap.org/copyright) © OpenStreetMap contributors, available under the ODbL.
 
 ## Running it locally
 
-It's a single static page with no build step.
+It's a static site with no build step.
 
 ```bash
 python -m http.server 8123
@@ -96,11 +100,20 @@ Then open http://localhost:8123. Use a local server rather than opening `index.h
 ## Project structure
 
 ```
-index.html            The whole app: layout, styles and script
-sw.js                 Service worker: offline support and caching of the receipt reader
-manifest.webmanifest  App name, colours and icons for installing
-icons/                App icons
+index.html                 Layout: every screen and dialog
+css/app.css                Styles, including day and night colours
+js/app.js                  The app: logging, calculations, charts, reminders, backups
+js/i18n.js                 Bahasa Melayu: exact phrases and patterns for text with numbers
+stations.json              Petrol stations in Malaysia (from OpenStreetMap)
+tools/build-stations.mjs   Rebuilds stations.json from an OpenStreetMap download
+sw.js                      Service worker: offline support and caching
+manifest.webmanifest       App name, colours, icons and home-screen shortcuts
+icons/                     App icons
 ```
+
+**Adding text:** write it in English in `index.html` or `js/app.js`, then add the same text with its Malay translation to `MS` in `js/i18n.js`. Anything missing just shows in English.
+
+**Updating the station list:** the steps are at the top of `tools/build-stations.mjs`.
 
 ## Deploying
 

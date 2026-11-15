@@ -1,6 +1,6 @@
 // Fuel Log service worker: makes the app open offline and keeps the receipt reader cached.
-const VERSION = 'fuellog-v12';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
+const VERSION = 'fuellog-v13';
+const SHELL = ['./', './index.html', './css/app.css', './js/i18n.js', './js/app.js', './stations.json', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const CDN = ['cdn.jsdelivr.net', 'unpkg.com', 'tessdata.projectnaptha.com'];
 
 self.addEventListener('install', e => {
