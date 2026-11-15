@@ -87,14 +87,25 @@
   /* 16px stops iPhones zooming in when a field is tapped */
   input, select { width: 100%; font: inherit; font-size: 16px; color: var(--text); background: var(--bg);
     border: 1px solid var(--line); border-radius: 10px; padding: 10px 11px; min-height: 44px; }
-  input[type=checkbox] { min-height: 0; width: 20px; height: 20px; accent-color: var(--accent); }
+  input, select { min-width: 0; max-width: 100%; display: block; }
+  .grid2 > * { min-width: 0; }
+  /* iPhone date fields have their own width and centred text: make them behave like the other fields */
+  input[type=date] { -webkit-appearance: none; appearance: none; text-align: left; }
+  input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+  select { -webkit-appearance: none; appearance: none; padding-right: 36px;
+    background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23889' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 13px center; }
+  .lbl { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .pills { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .pills button { min-width: 0; min-height: 44px; padding: 6px 2px; border-radius: 999px; font-size: 14px; white-space: nowrap; }
+  .pills button[aria-checked="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  input[type=checkbox] { display: inline-block; min-height: 0; width: 20px; height: 20px; accent-color: var(--accent); }
   input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   .hint { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
   .hint.warn { color: var(--warn); }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .check { display: flex; align-items: flex-start; gap: 8px; color: var(--text); font-size: 14px; }
-  .check input { width: auto; margin-top: 3px; }
+  .check { min-height: 44px; align-items: center; } .check input { width: 20px; flex-shrink: 0; margin: 0; }
 
   /* home */
   .note { display: flex; gap: 10px; align-items: flex-start; background: var(--accent-soft); color: var(--text); border-radius: 14px;
@@ -121,7 +132,7 @@
   .hero .foot .next b { color: var(--accent); }
   .hero .foot .range.low { color: var(--danger); }
   .hero .foot .range.low small { color: var(--danger); }
-  .hero .foot .upd { font-size: 13px; padding: 8px 4px; margin: -8px -4px; min-height: 0; }
+  .hero .foot .upd { font-size: 13px; padding: 12px 6px; margin: -12px -6px; min-height: 0; }
   .budi { display: flex; gap: 10px; align-items: center; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line);
     border-radius: 12px; background: var(--bg); color: var(--text); font-size: 14px; cursor: pointer; }
   .budi:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
@@ -183,8 +194,8 @@
   .glabel { display: flex; justify-content: space-between; align-items: baseline; }
   .glabel span { font-size: 12.5px; color: var(--muted); }
   .glabel span.warn { color: var(--warn); }
-  details.more { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 12px; }
-  details.more summary { cursor: pointer; color: var(--muted); font-size: 14px; list-style: none; display: flex; gap: 6px; align-items: center; }
+  details.more { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 2px; }
+  details.more summary { cursor: pointer; color: var(--muted); font-size: 14px; list-style: none; display: flex; gap: 6px; align-items: center; min-height: 44px; }
   details.more summary::-webkit-details-marker { display: none; }
   details.more summary::before { content: "▸"; transition: transform .15s; }
   details.more[open] summary::before { transform: rotate(90deg); }
@@ -373,11 +384,12 @@
       <details class="more" id="more">
         <summary>More <b id="moreSummary"></b></summary>
         <div class="body">
-          <div class="grid2">
-            <div><label for="f-date">Date</label><input id="f-date" type="date"></div>
-            <div><label for="f-type">Fuel</label>
-              <select id="f-type"><option>RON95</option><option>RON97</option><option>RON100</option><option>Diesel</option><option>Other</option></select></div>
-          </div>
+          <div><span class="lbl" id="typeLbl">Fuel</span>
+            <input id="f-type" type="hidden" value="RON95">
+            <div class="pills" role="radiogroup" aria-labelledby="typeLbl" id="typePills">
+              <button type="button" role="radio" data-v="RON95">RON95</button><button type="button" role="radio" data-v="RON97">RON97</button><button type="button" role="radio" data-v="RON100">RON100</button><button type="button" role="radio" data-v="Diesel">Diesel</button><button type="button" role="radio" data-v="Other">Other</button>
+            </div></div>
+          <div><label for="f-date">Date</label><input id="f-date" type="date"></div>
           <div><label for="f-station">Station / note</label><input id="f-station" type="text" placeholder="Petronas Jalan Ampang"></div>
           <label class="check"><input id="f-missed" type="checkbox"><span>I missed logging the fill-up before this one<span class="hint" style="display:block">Leaves this stretch out of the consumption average.</span></span></label>
         </div>
@@ -425,8 +437,9 @@
       <div class="tabs" role="radiogroup" aria-label="Day or night mode" id="themeTabs" style="margin:0 0 14px">
         <button role="radio" data-t="auto">Auto</button><button role="radio" data-t="light">Day</button><button role="radio" data-t="dark">Night</button>
       </div>
-      <label for="s-unit">Show consumption as</label>
-      <select id="s-unit"><option value="kmpl">km/L</option><option value="l100">L/100 km</option></select>
+      <span class="lbl" id="unitLbl">Show consumption as</span>
+      <div class="tabs" role="radiogroup" aria-labelledby="unitLbl" id="unitTabs" style="grid-template-columns:1fr 1fr;margin:0">
+        <button type="button" role="radio" data-u="kmpl">km/L</button><button type="button" role="radio" data-u="l100">L/100 km</button></div>
     </div>
     <div class="card">
       <h2>Data</h2>
@@ -694,7 +707,13 @@
   }
   F('odo').addEventListener('input', odoHint);
 
+  const syncTypePills = () => $$('#typePills button').forEach(b => b.setAttribute('aria-checked', b.dataset.v === F('type').value));
+  $('#typePills').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    F('type').value = b.dataset.v; F('type').dispatchEvent(new Event('change'));
+  };
   function moreSummary() {
+    syncTypePills();
     const bits = [F('date').value === today() ? 'Today' : fmtDate(F('date').value), F('type').value];
     if (F('station').value.trim()) bits.push(F('station').value.trim());
     if (F('missed').checked) bits.push('after missed fill-up');
@@ -1263,7 +1282,7 @@
     $('#s-vehRow').hidden = settings.vehicles.length < 2;
     $('#s-name').value = v.name; $('#s-tank').value = v.tank; $('#s-budget').value = v.budget; $('#s-steps').value = String(steps());
     $('#delVeh').hidden = settings.vehicles.length < 2;
-    $('#s-unit').value = settings.unit;
+    $$('#unitTabs button').forEach(b => b.setAttribute('aria-checked', b.dataset.u === settings.unit));
     $('#s-budiOn').checked = settings.budi.on; $('#budiFields').hidden = !settings.budi.on;
     $('#s-budiQuota').value = settings.budi.quota; $('#s-budiPrice').value = settings.budi.price; $('#s-marketPrice').value = settings.budi.market;
   }
@@ -1275,7 +1294,7 @@
   [['s-budiQuota', 'quota'], ['s-budiPrice', 'price'], ['s-marketPrice', 'market']].forEach(([id, k]) =>
     $('#' + id).oninput = () => { settings.budi[k] = +$('#' + id).value || 0; saveSettings(); });
   $('#s-steps').onchange = () => { veh().gaugeSteps = +$('#s-steps').value; saveSettings(); buildMeters(); };
-  $('#s-unit').onchange = () => { settings.unit = $('#s-unit').value; saveSettings(); };
+  $('#unitTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; settings.unit = b.dataset.u; saveSettings(); $$('#unitTabs button').forEach(x => x.setAttribute('aria-checked', x === b)); };
   $('#addVeh').onclick = () => {
     const v = newVehicle('Vehicle ' + (settings.vehicles.length + 1));
     settings.vehicles.push(v); switchVehicle(v.id);
