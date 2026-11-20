@@ -1,4 +1,14 @@
 (() => {
+  // Right after an update, the browser can still hand out an older index.html or js/i18n.js from its cache while this
+  // file is new. Then load the files this version needs (bypassing the cache) and start again, instead of failing.
+  const need = [!window.FuelCore && 'js/core.js', !window.FUEL_LOG_MS?.trMS && 'js/i18n.js'].filter(Boolean);
+  if (need.length) {
+    if (window.__fuelLogRetried) { console.error('Fuel Log: could not load ' + need.join(', ')); return; }
+    window.__fuelLogRetried = true;
+    const v = '?v=' + Date.now(), add = src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + v; s.onload = ok; s.onerror = no; document.head.append(s); });
+    Promise.all(need.map(add)).then(() => add('js/app.js')).catch(() => console.error('Fuel Log: could not load ' + need.join(', ')));
+    return;
+  }
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const KEY = 'fuellog.v1', SKEY = 'fuellog.settings.v1';
   const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
