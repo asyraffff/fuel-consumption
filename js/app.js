@@ -1,6 +1,14 @@
 (() => {
-  // Right after an update, the browser can still hand out an older index.html or js/i18n.js from its cache while this
-  // file is new. Then load the files this version needs (bypassing the cache) and start again, instead of failing.
+  // Must match <meta name="app-version"> in index.html and VERSION in sw.js (tests/version.test.js checks).
+  const APP_VERSION = 'fuellog-v17';
+  // Right after an update, the browser can still hand out an older index.html from its cache while this file is new.
+  // The page then lacks parts this code needs, so fetch the new page and reload (once).
+  const reloadKey = 'fuelLogReloaded';
+  const flag = { get: () => { try { return sessionStorage.getItem(reloadKey); } catch { return '1'; } }, set: v => { try { v ? sessionStorage.setItem(reloadKey, v) : sessionStorage.removeItem(reloadKey); } catch {} } };
+  if (document.querySelector('meta[name="app-version"]')?.content !== APP_VERSION) {
+    if (!flag.get()) { flag.set('1'); fetch('./', { cache: 'reload' }).catch(() => {}).finally(() => location.reload()); return; }
+  } else flag.set(null);
+  // Same for js/core.js and js/i18n.js: load the ones this version needs (bypassing the cache) and start again.
   const need = [!window.FuelCore && 'js/core.js', !window.FUEL_LOG_MS?.trMS && 'js/i18n.js'].filter(Boolean);
   if (need.length) {
     if (window.__fuelLogRetried) { console.error('Fuel Log: could not load ' + need.join(', ')); return; }

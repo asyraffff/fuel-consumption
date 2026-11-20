@@ -160,6 +160,11 @@ icons/                     App icons
 
 The site is served by **GitHub Pages** from the `main` branch (root folder). Pushing to `main` publishes within a minute or two.
 
-When you change the app, bump `VERSION` in `sw.js` so installed copies drop their old cache and pick up the new version.
+When you change the app, bump the version so installed copies drop their old cache and pick up the new version. It's in three places, which must match (`node --test` checks):
+- `VERSION` in `sw.js`;
+- `<meta name="app-version">` in `index.html`;
+- `APP_VERSION` in `js/app.js`.
+
+If a phone's browser still hands out the old page from its cache, the new code notices the mismatch and reloads once to get the new page.
 
 **Security policy:** `index.html` has a Content Security Policy. Don't add inline `<script>` blocks or `onclick=` attributes (they'd be blocked); put code in `js/`. If you upgrade tesseract.js, update its `integrity` hash too, or the receipt reader won't load. Any new outside site the app talks to must be added to the policy's `connect-src`.

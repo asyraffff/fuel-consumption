@@ -1,5 +1,5 @@
 // Fuel Log service worker: makes the app open offline and keeps the receipt reader cached.
-const VERSION = 'fuellog-v16';
+const VERSION = 'fuellog-v17';
 const SHELL = ['./', './index.html', './css/app.css', './js/theme.js', './js/core.js', './js/i18n.js', './js/app.js', './stations.json', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const CDN = ['cdn.jsdelivr.net', 'unpkg.com', 'tessdata.projectnaptha.com'];
 
