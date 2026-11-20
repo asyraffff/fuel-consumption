@@ -1,5 +1,5 @@
 // Fuel Log service worker: makes the app open offline and keeps the receipt reader cached.
-const VERSION = 'fuellog-v15';
+const VERSION = 'fuellog-v16';
 const SHELL = ['./', './index.html', './css/app.css', './js/theme.js', './js/core.js', './js/i18n.js', './js/app.js', './stations.json', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const CDN = ['cdn.jsdelivr.net', 'unpkg.com', 'tessdata.projectnaptha.com'];
 
@@ -19,9 +19,11 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
 
   // App files: use the network when online (so updates arrive), fall back to cache offline.
-  // 'no-cache' checks with the server every time, so a new app.js never runs with an old app.css from the browser cache.
+  // 'no-cache' checks with the server every time, so after an update the page, app.js and app.css all arrive together
+  // instead of some coming from the browser's cache. (Page loads keep redirect: 'manual' so the browser follows redirects itself.)
   if (url.origin === location.origin) {
-    const fresh = req.mode === 'navigate' ? req : new Request(req, { cache: 'no-cache' });
+    const fresh = req.mode === 'navigate' ? new Request(req.url, { cache: 'no-cache', redirect: 'manual', credentials: 'same-origin' })
+      : new Request(req, { cache: 'no-cache' });
     e.respondWith(fetch(fresh).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
       return res;
