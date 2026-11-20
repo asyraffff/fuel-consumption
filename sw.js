@@ -1,6 +1,6 @@
 // Fuel Log service worker: makes the app open offline and keeps the receipt reader cached.
-const VERSION = 'fuellog-v13';
-const SHELL = ['./', './index.html', './css/app.css', './js/i18n.js', './js/app.js', './stations.json', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
+const VERSION = 'fuellog-v14';
+const SHELL = ['./', './index.html', './css/app.css', './js/theme.js', './js/i18n.js', './js/app.js', './stations.json', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const CDN = ['cdn.jsdelivr.net', 'unpkg.com', 'tessdata.projectnaptha.com'];
 
 self.addEventListener('install', e => {
@@ -27,8 +27,10 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Receipt reader (versioned CDN files): cache first, they never change.
-  if (CDN.includes(url.hostname)) {
+  // Receipt reader (version-pinned CDN files): cache first, they never change.
+  // Only exact-version paths are cached, so a cached copy is always the version the page asked for.
+  // The main script is also checked against its hash (index.html), so a tampered cached copy wouldn't run.
+  if (CDN.includes(url.hostname) && (url.hostname === 'tessdata.projectnaptha.com' || /@v?\d+\.\d+\.\d+\//.test(url.pathname))) {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
       if (res.ok || res.type === 'opaque') { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
       return res;

@@ -69,7 +69,7 @@
   adoptOrphans(); saveSettings();
   let pendingThumb = null;
 
-  const rm = n => 'RM ' + (n || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const rm = n => 'RM ' + (+n || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const num = (n, d = 1) => (n == null || !isFinite(n)) ? '–' : n.toLocaleString('en-MY', { minimumFractionDigits: d, maximumFractionDigits: d });
   const fmtDate = s => new Date(s + 'T00:00').toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric' });
   const fmtDay = s => new Date(s + 'T00:00').toLocaleDateString(LOC, { weekday: 'short', day: 'numeric', month: 'short' });
@@ -151,7 +151,7 @@
     if (e.target.closest('#vehBtn')) {
       $('#vehList').innerHTML = settings.vehicles.map(v => {
         const n = entries.filter(x => x.vehicleId === v.id).length;
-        return `<button type="button" data-veh="${v.id}" aria-pressed="${v.id === settings.current}"><b>${esc(v.name)}</b><span>${n} fill-up${n === 1 ? '' : 's'}</span></button>`;
+        return `<button type="button" data-veh="${esc(v.id)}" aria-pressed="${v.id === settings.current}"><b>${esc(v.name)}</b><span>${n} fill-up${n === 1 ? '' : 's'}</span></button>`;
       }).join('');
       vehDlg.showModal();
     }
@@ -835,7 +835,7 @@
     $('#k-odo').value = c?.odo ?? (preset.odo ? Math.round(preset.odo) : ''); $('#k-note').value = c?.note || '';
     const ticked = c ? (c.done || []) : preset.remId ? [preset.remId] : [];
     $('#k-rems').innerHTML = rs.length ? '<span class="lbl">Also mark as done</span>' + rs.map(r =>
-      `<label class="check"><input type="checkbox" data-rem="${r.id}"${ticked.includes(r.id) ? ' checked' : ''}> ${esc(r.name)}</label>`).join('') : '';
+      `<label class="check"><input type="checkbox" data-rem="${esc(r.id)}"${ticked.includes(r.id) ? ' checked' : ''}> ${esc(r.name)}</label>`).join('') : '';
     setCat(c?.cat || preset.cat || 'service');
     $('#k-del').hidden = !c;
     costDlg.showModal();
@@ -884,7 +884,7 @@
     $('#historyList').innerHTML = add + groups.map(g => {
       const name = new Date(g.k + '-01T00:00').toLocaleDateString(LOC, { month: 'long', year: 'numeric' });
       return `<div class="month"><div class="mh"><b>${name}</b><span>${rm(g.items.reduce((a, c) => a + c.amount, 0))}</span></div><div class="list">` +
-        g.items.map(c => `<div class="swipe" data-id="${c.id}"><button class="del" tabindex="-1">Delete</button>
+        g.items.map(c => `<div class="swipe" data-id="${esc(c.id)}"><button class="del" tabindex="-1">Delete</button>
           <div class="front" role="button" tabindex="0" aria-label="Edit ${catName(c.cat)} on ${fmtDate(c.date)}">
             <div class="t">${catIcon(c.cat)} ${catName(c.cat)}</div><div class="amt">${rm(c.amount)}</div>
             <div class="m">${[fmtDay(c.date), c.odo ? num(c.odo, 0) + ' km' : '', esc(c.note || '')].filter(Boolean).join(' · ')}</div><div class="eff"></div>
@@ -920,7 +920,7 @@
     const rs = (veh().reminders || []).map(r => ({ r, st: remStatus(r) })).filter(x => x.st.soon).sort((a, b) => a.st.order - b.st.order);
     const el = $('#dueCard'); el.hidden = !rs.length; if (!rs.length) { el.innerHTML = ''; return; }
     el.innerHTML = '<div class="k">Coming up</div>' + rs.map(({ r, st }) =>
-      `<div class="duerow"><div><b>${esc(r.name)}</b><div class="s${st.overdue ? ' bad' : ''}">${st.text}</div></div><button data-done="${r.id}">Done</button></div>`).join('');
+      `<div class="duerow"><div><b>${esc(r.name)}</b><div class="s${st.overdue ? ' bad' : ''}">${st.text}</div></div><button data-done="${esc(r.id)}">Done</button></div>`).join('');
   }
   $('#dueCard').onclick = e => {
     const b = e.target.closest('[data-done]'); if (!b) return;
@@ -932,7 +932,7 @@
     const rs = veh().reminders || [];
     $('#remList').innerHTML = rs.length ? rs.map(r => {
       const st = remStatus(r), every = [+r.km ? num(+r.km, 0) + ' km' : '', +r.months ? r.months + ' month' + (+r.months === 1 ? '' : 's') : ''].filter(Boolean).join(' or ');
-      return `<button class="remrow" data-rem="${r.id}"><span><b>${esc(r.name)}</b> <small>· every ${every}</small></span><small class="${st.overdue ? 'bad' : st.soon ? 'warnt' : ''}">Next ${st.text}</small></button>`;
+      return `<button class="remrow" data-rem="${esc(r.id)}"><span><b>${esc(r.name)}</b> <small>· every ${every}</small></span><small class="${st.overdue ? 'bad' : st.soon ? 'warnt' : ''}">Next ${st.text}</small></button>`;
     }).join('') : '<div class="hint" style="margin:6px 0 0">Get a heads-up before the oil change, road tax or insurance is due.</div>';
   }
   const remDlg = $('#remDlg');
@@ -1253,8 +1253,8 @@
           if (isBudi(x)) tags.push('<span class="pill">BUDI95</span>');
           if (!x.full) tags.push('<span class="pill w">partial</span>');
           if (x.missed) tags.push('<span class="pill w">after missed</span>');
-          const meta = [num(x.odo, 0) + ' km', num(x.litres, 2) + ' L', x.type, x.station ? esc(x.station) : ''].filter(Boolean).join(' · ');
-          return `<div class="swipe" data-id="${x.id}"><button class="del" tabindex="-1">Delete</button>
+          const meta = [num(x.odo, 0) + ' km', num(x.litres, 2) + ' L', esc(x.type), x.station ? esc(x.station) : ''].filter(Boolean).join(' · ');
+          return `<div class="swipe" data-id="${esc(x.id)}"><button class="del" tabindex="-1">Delete</button>
             <div class="front" role="button" tabindex="0" aria-label="Edit fill-up on ${fmtDate(x.date)}">
               <div class="t">${fmtDay(x.date)}${x.hasReceipt ? '<button class="rcpt" aria-label="View receipt" title="View receipt">🧾</button>' : ''}${tags.join('')}</div>
               <div class="amt">${rm(x.total)}</div>
@@ -1334,7 +1334,7 @@
   /* ---------- settings & data ---------- */
   function renderSettings() {
     const v = veh();
-    $('#s-veh').innerHTML = settings.vehicles.map(x => `<option value="${x.id}"${x.id === v.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('');
+    $('#s-veh').innerHTML = settings.vehicles.map(x => `<option value="${esc(x.id)}"${x.id === v.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('');
     $('#s-vehRow').hidden = settings.vehicles.length < 2;
     $('#s-name').value = v.name; $('#s-tank').value = v.tank; $('#s-budget').value = v.budget; $('#s-steps').value = String(steps());
     $('#delVeh').hidden = settings.vehicles.length < 2;
@@ -1399,44 +1399,83 @@
     toast('Backup saved'); return true;
   }
   $('#expJson').onclick = () => backup().then(ok => ok && view === 'home' && renderHome());
+  // Text cells are quoted, and a leading = + - @ gets a ' so Excel/Sheets show it as text instead of running it as a formula.
+  const csvText = t => { const s = String(t ?? ''); return '"' + (/^[=+\-@\t\r]/.test(s) ? "'" + s : s).replace(/"/g, '""') + '"'; };
   $('#expCsv').onclick = () => {
     const vname = id => settings.vehicles.find(v => v.id === id)?.name || '';
     const all = [...entries].sort((a, b) => vname(a.vehicleId).localeCompare(vname(b.vehicleId)) || a.date.localeCompare(b.date) || a.odo - b.odo);
     const legsAll = {}; const cur = settings.current;
     settings.vehicles.forEach(v => { settings.current = v.id; legs().forEach(l => legsAll[l.id] = l); }); settings.current = cur;
     const rows = [['vehicle', 'date', 'odometer_km', 'fuel', 'litres', 'price_per_l_rm', 'total_rm', 'gauge_before_pct', 'gauge_after_pct', 'full_tank', 'missed_previous', 'budi95', 'range_before_km', 'range_after_km', 'km_since_last', 'km_per_l', 'station']]
-      .concat(all.map(x => ['"' + vname(x.vehicleId).replace(/"/g, '""') + '"', x.date, x.odo, x.type, x.litres, x.price, x.total, x.before ?? '', x.after ?? '', x.full, !!x.missed, isBudi(x), x.rangeBefore ?? '', x.rangeAfter ?? '',
-        legsAll[x.id]?.km ?? '', legsAll[x.id] ? legsAll[x.id].kmpl.toFixed(2) : '', '"' + (x.station || '').replace(/"/g, '""') + '"']));
+      .concat(all.map(x => [csvText(vname(x.vehicleId)), x.date, x.odo, csvText(x.type), x.litres, x.price, x.total, x.before ?? '', x.after ?? '', x.full, !!x.missed, isBudi(x), x.rangeBefore ?? '', x.rangeAfter ?? '',
+        legsAll[x.id]?.km ?? '', legsAll[x.id] ? legsAll[x.id].kmpl.toFixed(2) : '', csvText(x.station)]));
     download(`fuel-log-${today()}.csv`, rows.map(r => r.join(',')).join('\n'), 'text/csv');
     if (costs.length) setTimeout(() => {
-      const q = t => '"' + String(t ?? '').replace(/"/g, '""') + '"';
       const cr = [['vehicle', 'date', 'category', 'amount_rm', 'odometer_km', 'note']].concat([...costs].sort((a, b) => a.date.localeCompare(b.date))
-        .map(c => [q(vname(c.vehicleId)), c.date, catName(c.cat), c.amount, c.odo ?? '', q(c.note)]));
+        .map(c => [csvText(vname(c.vehicleId)), c.date, csvText(catName(c.cat)), c.amount, c.odo ?? '', csvText(c.note)]));
       download(`car-costs-${today()}.csv`, cr.map(r => r.join(',')).join('\n'), 'text/csv');
     }, 600);
   };
+  /* A backup file can come from anyone (e.g. sent on WhatsApp), so nothing in it is trusted:
+     each record is rebuilt from the fields the app knows, with the right types, and anything else is dropped. */
+  const okId = v => typeof v === 'string' && /^[\w-]{1,64}$/.test(v) ? v : null;
+  const okDate = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(new Date(v + 'T00:00')) ? v : null;
+  const okNum = v => { const n = typeof v === 'string' && v.trim() ? Number(v) : v; return typeof n === 'number' && isFinite(n) ? n : null; };
+  const okStr = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
+  const FUELS = ['RON95', 'RON97', 'RON100', 'Diesel', 'Other'];
+  function cleanEntry(x) {
+    const id = okId(x?.id), date = okDate(x?.date); if (!id || !date) return null;
+    const n = k => okNum(x[k]);
+    const e = { id, date, odo: n('odo') ?? 0, total: n('total') ?? 0, litres: n('litres') ?? 0, price: n('price') ?? 0,
+      type: FUELS.includes(x.type) ? x.type : 'Other', before: n('before'), after: n('after'), full: !!x.full, missed: !!x.missed,
+      station: okStr(x.station, 120), hasReceipt: false, vehicleId: okId(x.vehicleId), rangeBefore: n('rangeBefore'), rangeAfter: n('rangeAfter') };
+    if (typeof x.budi === 'boolean') e.budi = x.budi;
+    return e;
+  }
+  function cleanCost(c) {
+    const id = okId(c?.id), date = okDate(c?.date); if (!id || !date) return null;
+    return { id, vehicleId: okId(c.vehicleId), date, cat: Object.hasOwn(CATS, c.cat) ? c.cat : 'other', amount: okNum(c.amount) ?? 0,
+      odo: okNum(c.odo), note: okStr(c.note, 300), done: Array.isArray(c.done) ? c.done.map(okId).filter(Boolean) : [] };
+  }
+  function cleanRem(r) {
+    const id = okId(r?.id); if (!id) return null;
+    return { id, name: okStr(r.name, 60) || 'Reminder', km: okNum(r.km), months: okNum(r.months), lastDate: okDate(r.lastDate),
+      lastKm: okNum(r.lastKm), cat: Object.hasOwn(CATS, r.cat) ? r.cat : null };
+  }
+  function cleanVehicle(v) {
+    const id = okId(v?.id); if (!id) return null;
+    const s = k => okNum(v[k]) != null ? String(okNum(v[k])) : '';
+    const out = { id, name: okStr(v.name, 60) || 'Vehicle', tank: s('tank'), budget: s('budget'),
+      lastType: FUELS.includes(v.lastType) ? v.lastType : 'RON95', lastStation: okStr(v.lastStation, 120),
+      reminders: Array.isArray(v.reminders) ? v.reminders.map(cleanRem).filter(Boolean) : [] };
+    if (okNum(v.gaugeSteps) > 0 && okNum(v.gaugeSteps) <= 16) out.gaugeSteps = okNum(v.gaugeSteps);
+    if (okId(v.nudged)) out.nudged = v.nudged;
+    if (v.check && typeof v.check === 'object' && okDate(v.check.date))
+      out.check = { date: v.check.date, range: okNum(v.check.range), odo: okNum(v.check.odo), fillId: okId(v.check.fillId) };
+    return out;
+  }
   $('#impJson').onchange = async e => {
     const f = e.target.files[0]; e.target.value = ''; if (!f) return;
     try {
       const d = JSON.parse(await f.text()); const list = Array.isArray(d) ? d : d.entries;
       if (!Array.isArray(list)) throw 0;
-      const ids = new Set(entries.map(x => x.id)); const add = list.filter(x => x && x.id && x.date && !ids.has(x.id));
+      const ids = new Set(entries.map(x => x.id)); const add = list.map(cleanEntry).filter(x => x && !ids.has(x.id));
       // receipt photos come along when the backup included them
       let photos = 0;
       for (const x of add) {
-        const p = d.photos?.[x.id];
-        if (p && /^data:image\//.test(p)) { try { await idb.put(x.id, p); x.hasReceipt = true; photos++; continue; } catch {} }
+        const p = d.photos && Object.hasOwn(d.photos, x.id) ? d.photos[x.id] : null;
+        if (typeof p === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,[\w+/=]+$/.test(p)) { try { await idb.put(x.id, p); x.hasReceipt = true; photos++; continue; } catch {} }
         x.hasReceipt = false;
       }
       if (Array.isArray(d.settings?.vehicles)) { // bring in vehicles we don't have yet
         const have = new Set(settings.vehicles.map(v => v.id));
-        d.settings.vehicles.filter(v => v && v.id && !have.has(v.id)).forEach(v => settings.vehicles.push(v));
+        d.settings.vehicles.map(cleanVehicle).filter(v => v && !have.has(v.id)).forEach(v => settings.vehicles.push(v));
         saveSettings();
       }
       entries = entries.concat(add); save(KEY, entries); adoptOrphans(); await tidyPhotos();
       if (Array.isArray(d.costs)) {
         const have = new Set(costs.map(c => c.id)), vs = new Set(settings.vehicles.map(v => v.id));
-        costs = costs.concat(d.costs.filter(c => c && c.id && c.date && !have.has(c.id)).map(c => vs.has(c.vehicleId) ? c : { ...c, vehicleId: settings.current }));
+        costs = costs.concat(d.costs.map(cleanCost).filter(c => c && !have.has(c.id)).map(c => vs.has(c.vehicleId) ? c : { ...c, vehicleId: settings.current }));
         save(CKEY, costs);
       }
       renderSettings(); renderTitle();
@@ -1486,4 +1525,9 @@
   keepData();
   if ('serviceWorker' in navigator && location.protocol.startsWith('http'))
     navigator.serviceWorker.register('sw.js').catch(e => console.warn('offline mode unavailable', e));
+  // Close buttons in dialogs and the dismiss button on the "Saved" note (no inline onclick, so the page's security policy can block inline scripts)
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-close],[data-dismiss]'); if (!b) return;
+    if (b.hasAttribute('data-close')) b.closest('dialog')?.close(); else b.parentElement.hidden = true;
+  });
 })();

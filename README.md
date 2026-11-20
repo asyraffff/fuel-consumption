@@ -85,6 +85,7 @@ The **range and next fill-up** estimates use, in order of preference: the range 
 - Nothing is uploaded anywhere. Receipt scanning runs on the phone using [Tesseract.js](https://github.com/naptha/tesseract.js). Your location (only if you use **Near me** or allow it) stays on the phone too.
 - The app asks the browser to keep its data permanently. **Settings → Data** shows whether it agreed; installed apps usually get it.
 - Clearing your browser data or uninstalling the app still deletes your log, so use **Settings → Export backup** now and then. Tick **Include receipt photos in backups** to bring the photos along (the file gets bigger).
+- **Importing a backup is safe even if someone else made the file:** only the fields the app knows are kept, numbers must be numbers, and only real photos are accepted. The page also has a security policy that only lets scripts load from the app itself and the receipt reader's CDN, and the receipt reader is checked against a known fingerprint before it runs. CSV exports put a `'` in front of text starting with `=`, `+`, `-` or `@`, so Excel and Sheets don't treat it as a formula.
 - The petrol station list is from [OpenStreetMap](https://www.openstreetmap.org/copyright) © OpenStreetMap contributors, available under the ODbL.
 
 ## Running it locally
@@ -104,6 +105,7 @@ index.html                 Layout: every screen and dialog
 css/app.css                Styles, including day and night colours
 js/app.js                  The app: logging, calculations, charts, reminders, backups
 js/i18n.js                 Bahasa Melayu: exact phrases and patterns for text with numbers
+js/theme.js                Applies day/night before the page paints
 stations.json              Petrol stations in Malaysia (from OpenStreetMap)
 tools/build-stations.mjs   Rebuilds stations.json from an OpenStreetMap download
 sw.js                      Service worker: offline support and caching
@@ -120,3 +122,5 @@ icons/                     App icons
 The site is served by **GitHub Pages** from the `main` branch (root folder). Pushing to `main` publishes within a minute or two.
 
 When you change the app, bump `VERSION` in `sw.js` so installed copies drop their old cache and pick up the new version.
+
+**Security policy:** `index.html` has a Content Security Policy. Don't add inline `<script>` blocks or `onclick=` attributes (they'd be blocked); put code in `js/`. If you upgrade tesseract.js, update its `integrity` hash too, or the receipt reader won't load. Any new outside site the app talks to must be added to the policy's `connect-src`.
