@@ -214,10 +214,10 @@ details.ocr pre { white-space: pre-wrap; max-height: 160px; overflow: auto; back
 .vehbtn svg { width: 18px; height: 18px; color: var(--muted); flex: none; }
 .vehbtn img { width: 26px; height: 26px; border-radius: 7px; }
 .top h1 .sub { font-size: 14px; color: var(--muted); font-weight: 500; }
-#vehDlg, #checkDlg, #costDlg, #remDlg { width: min(92vw, 400px); }
-#costDlg, #remDlg { overflow: auto; }
+#vehDlg, #checkDlg, #costDlg, #remDlg, #tripDlg, #yirDlg { width: min(92vw, 400px); }
+#costDlg, #remDlg, #tripDlg, #yirDlg { overflow: auto; }
 @media (max-width: 600px) { /* bottom sheet on phones: easy to reach with a thumb */
-  #vehDlg, #checkDlg, #costDlg, #remDlg { margin: auto 0 0; width: 100%; max-width: 100%; border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+  #vehDlg, #checkDlg, #costDlg, #remDlg, #tripDlg, #yirDlg { margin: auto 0 0; width: 100%; max-width: 100%; border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom); }
 }
 #vehList button { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; border-radius: 0;
   border-bottom: 1px solid var(--line); padding: 14px; background: none; text-align: left; }
@@ -230,7 +230,7 @@ details.ocr pre { white-space: pre-wrap; max-height: 160px; overflow: auto; back
 .pills.cats { grid-template-columns: repeat(3, 1fr); }
 .pills.cats button { min-height: 40px; font-size: 13.5px; }
 .addcost { width: 100%; border: 1.5px dashed var(--accent); color: var(--accent); background: transparent; font-weight: 600; padding: 12px; margin-bottom: 14px; border-radius: 12px; }
-.minifoot { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.minifoot { display: flex; justify-content: space-between; gap: 4px 8px; margin-top: 4px; flex-wrap: wrap; }
 .minifoot .link { min-height: 44px; font-size: 14px; }
 .due .k { color: var(--muted); font-size: 13px; }
 .duerow { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
@@ -304,3 +304,19 @@ dialog img { display: block; max-width: 100%; max-height: calc(90vh - 56px); mar
 dialog .bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 8px 8px 14px; border-bottom: 1px solid var(--line);
   height: auto; overflow: visible; margin: 0; background: none; border-radius: 0; }
 dialog .bar button { min-height: 40px; }
+
+/* trip cost */
+.tripres:empty { display: none; }
+.tripres { background: var(--bg); border-radius: 14px; padding: 14px; display: grid; gap: 8px; font-size: 14px; }
+.tripres .big { font-size: 30px; font-weight: 750; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tripres .s { color: var(--muted); font-size: 13px; }
+.tripres .ln { display: flex; gap: 8px; align-items: flex-start; }
+.tripres .ln > span:first-child { flex: none; width: 20px; text-align: center; }
+.tripres .warn { color: var(--warn); }
+#tripDlg .grid2 .check { min-height: 0; margin-top: 22px; }
+/* year in review */
+.yir { display: flex; align-items: center; gap: 12px; }
+.yir .t { flex: 1; font-size: 14px; } .yir .t b { display: block; font-size: 15.5px; }
+.yir .x { background: none; border: 0; color: var(--muted); font-size: 20px; min-width: 36px; min-height: 36px; padding: 0; }
+#yirImg { width: 100%; border-radius: 14px; display: block; background: var(--bg); aspect-ratio: 4 / 5; object-fit: contain; }
+#yirYears { margin: 0; }

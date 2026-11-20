@@ -55,13 +55,14 @@
 
       <div class="card due" id="dueCard" hidden></div>
       <div class="card ins" id="insights" hidden></div>
+      <div class="card yir" id="yirCard" hidden></div>
 
       <div class="card">
         <div class="chips" role="group" aria-label="Period" id="periodChips">
           <button data-p="month">Month</button><button data-p="3m">3 months</button><button data-p="year">Year</button><button data-p="all">All</button>
         </div>
         <div class="mini" id="miniStats"></div>
-        <div class="minifoot"><button class="link" id="addCostLink">+ Car cost</button><button class="link" id="shareReport">Share report</button></div>
+        <div class="minifoot"><button class="link" id="addCostLink">+ Car cost</button><button class="link" id="tripLink">🧭 Trip cost</button><button class="link" id="shareReport">Share report</button></div>
         <div class="tabs" role="tablist" aria-label="Chart" id="chartTabs">
           <button role="tab" data-c="spend">Spending</button><button role="tab" data-c="price">Price / L</button><button role="tab" data-c="eff" id="effTab">km/L</button>
         </div>
@@ -217,6 +218,7 @@
         <label class="btn" style="margin:0;color:inherit">Import backup<input id="impJson" type="file" accept="application/json,.json" hidden></label>
         <button id="expCsv">Export CSV</button>
         <button id="loadDemo">Sample data</button>
+        <button id="yirOpen" class="span2">🎉 Year in review</button>
         <label class="check span2" style="justify-content:flex-start"><input id="s-backupPhotos" type="checkbox"> <span>Include receipt photos in backups <span class="hint" id="photoSize" style="display:block;margin:0"></span></span></label>
         <div class="hint span2" id="persistNote" style="margin:0"></div>
         <button id="wipe" class="danger span2">Delete all data</button>
@@ -280,6 +282,37 @@
     </div>
   </form>
 </dialog>
+<dialog id="tripDlg" aria-labelledby="tripTitle">
+  <form id="tripForm" novalidate>
+    <div class="bar"><strong id="tripTitle">Trip cost</strong><button type="button" data-close>Close</button></div>
+    <div class="sheet">
+      <div><div class="stlabel"><label for="t-from" style="margin:0">From</label><button type="button" class="link" id="t-here">📍 Where I am</button></div>
+        <input id="t-from" type="text" placeholder="Town, e.g. Shah Alam" autocomplete="off" enterkeyhint="next" aria-controls="t-fromSug">
+        <div class="sug" id="t-fromSug" role="listbox" aria-label="Towns"></div></div>
+      <div><label for="t-to">To</label>
+        <input id="t-to" type="text" placeholder="Town, e.g. Ipoh" autocomplete="off" enterkeyhint="done" aria-controls="t-toSug">
+        <div class="sug" id="t-toSug" role="listbox" aria-label="Towns"></div></div>
+      <div class="grid2">
+        <div><label for="t-km">Distance one way (km)</label><input id="t-km" type="number" inputmode="numeric" min="0" step="1" placeholder="e.g. 200"></div>
+        <div><label for="t-eff" id="t-effLbl">Your km/L</label><input id="t-eff" type="number" inputmode="decimal" min="0" step="0.1"></div>
+      </div>
+      <div class="hint" id="t-kmHint" hidden>Estimated from the map: straight line + 20%. Change it if you know the road distance.</div>
+      <div class="grid2">
+        <label class="check"><input type="checkbox" id="t-return"> <span>Return trip</span></label>
+        <div><label for="t-people">People sharing</label><input id="t-people" type="number" inputmode="numeric" min="1" step="1" value="1"></div>
+      </div>
+      <div class="tripres" id="tripRes" aria-live="polite"></div>
+    </div>
+  </form>
+</dialog>
+<dialog id="yirDlg" aria-labelledby="yirTitle">
+  <div class="bar"><strong id="yirTitle">Year in review</strong><button type="button" data-close>Close</button></div>
+  <div class="sheet">
+    <div class="chips" role="group" aria-label="Year" id="yirYears"></div>
+    <img id="yirImg" alt="Year in review image">
+    <button class="primary" id="yirShare" style="padding:12px">Share image</button>
+  </div>
+</dialog>
 <dialog id="vehDlg" aria-label="Choose vehicle">
   <div class="bar"><strong>Vehicle</strong><button type="button" data-close>Close</button></div>
   <div id="vehList"></div>
@@ -291,6 +324,7 @@
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js" integrity="sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F" crossorigin="anonymous"></script>
+<script src="js/core.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/app.js"></script>
 </body>

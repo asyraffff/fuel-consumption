@@ -1,6 +1,6 @@
 // Fuel Log service worker: makes the app open offline and keeps the receipt reader cached.
-const VERSION = 'fuellog-v14';
-const SHELL = ['./', './index.html', './css/app.css', './js/theme.js', './js/i18n.js', './js/app.js', './stations.json', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
+const VERSION = 'fuellog-v15';
+const SHELL = ['./', './index.html', './css/app.css', './js/theme.js', './js/core.js', './js/i18n.js', './js/app.js', './stations.json', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const CDN = ['cdn.jsdelivr.net', 'unpkg.com', 'tessdata.projectnaptha.com'];
 
 self.addEventListener('install', e => {
@@ -19,8 +19,10 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
 
   // App files: use the network when online (so updates arrive), fall back to cache offline.
+  // 'no-cache' checks with the server every time, so a new app.js never runs with an old app.css from the browser cache.
   if (url.origin === location.origin) {
-    e.respondWith(fetch(req).then(res => {
+    const fresh = req.mode === 'navigate' ? req : new Request(req, { cache: 'no-cache' });
+    e.respondWith(fetch(fresh).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('./index.html'))));

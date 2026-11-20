@@ -1,0 +1,41 @@
+# Refreshes stations.json from OpenStreetMap on the 1st of every month, and commits it if anything changed.
+# Can also be run by hand: GitHub → Actions → "Update petrol stations" → Run workflow.
+name: Update petrol stations
+
+on:
+  schedule:
+    - cron: '17 2 1 * *'   # 1st of the month, 02:17 UTC (10:17 in Malaysia)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stations
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download and rebuild the station list
+        run: node tools/update-stations.mjs
+
+      - name: Commit if it changed
+        run: |
+          if git diff --quiet -- stations.json; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add stations.json
+          git commit -m "Update petrol stations from OpenStreetMap"
+          git push

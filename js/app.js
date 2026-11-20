@@ -16,25 +16,43 @@
   const LANG = settings.lang || (/^ms\b/i.test(navigator.language || '') ? 'ms' : 'en');
   const LOC = LANG === 'ms' ? 'ms-MY' : 'en-MY';
   document.documentElement.lang = LANG;
-  const { MS, RULES, tw } = window.FUEL_LOG_MS;
-  function trMS(str) {
-    const core = str.trim(); if (!core || !/[A-Za-z]/.test(core)) return str;
-    let out = MS[core];
-    if (out == null) {
-      const icon = core.match(/^([^A-Za-z\d(+]+ )(.+)$/u); // "🔧 Service"
-      if (icon && MS[icon[2]] != null) out = icon[1] + MS[icon[2]];
-      else if (/^[A-Za-z' ]+(, [A-Za-z' ]+)+$/.test(core) && core.split(', ').every(w => MS[w] != null)) out = core.split(', ').map(tw).join(', ');
-      else { out = core; for (const [re, to] of RULES) out = out.replace(re, to); }
-    }
-    return out === core ? str : str.replace(core, () => out);
-  }
+  const { MS, RULES, SAME, tw, trMS } = window.FUEL_LOG_MS;
+  const FC = window.FuelCore;
   const T = t => LANG === 'ms' ? trMS(String(t)) : t;
-  const L2 = (en, ms) => LANG === 'ms' ? ms : en; // for new sentences written in both languages directly
+  /* Translation check: open the app with ?i18n=check in Malay mode and use it; every piece of text that had no
+     translation is collected. Then run fuelLogMissing() in the browser console for the list to add to js/i18n.js. */
+  const I18N_CHECK = LANG === 'ms' && /[?&]i18n=check\b/.test(location.search);
+  const made = new Set(), missing = new Map();
+  const seen = (en, ms) => { if (!I18N_CHECK) return; const s = String(ms).replace(/<[^>]*>/g, '\n'); s.split('\n').forEach(x => x.trim() && made.add(x.trim())); };
+  // Only text with common English words in it is reported, so dates, numbers and names (already fine) don't clutter the list.
+  const EN = new Set(('the and your you for with from this that these those what when where which will would should could can not no yet ' +
+    'is are was were be been has have had it its of to in on at by as or if than then there here about after before more less each every ' +
+    'once times left last next fill fills fill-up fill-ups tank spent cost costs saved price prices month months year years day days ago week ' +
+    'add edit delete share update save saved back up log logged enter set see show change better worse usual average more trip people town').split(' '));
+  const miss = (t, where) => {
+    const k = t.trim();
+    if (!I18N_CHECK || !k || made.has(k) || SAME.has(k)) return;
+    if (k.toLowerCase().split(/[^a-z-]+/).some(w => EN.has(w))) missing.set(k, where);
+  };
+  if (I18N_CHECK) {
+    window.fuelLogMissing = () => { const list = [...missing].map(([text, where]) => ({ text, where })); console.table(list); return list.map(x => x.text); };
+    console.info('Translation check on: use the app, then run fuelLogMissing() to list text with no Malay translation.');
+  }
+  const L2 = (en, ms) => { if (LANG !== 'ms') return en; seen(en, ms); return ms; }; // for new sentences written in both languages directly
   if (LANG === 'ms') {
     const ATTRS = ['placeholder', 'aria-label', 'title'];
     const skip = n => n.parentElement?.closest('script, style, [lang="en"], [translate="no"]');
-    const doText = n => { if (skip(n)) return; const t = trMS(n.data); if (t !== n.data) n.data = t; };
-    const doEl = el => ATTRS.forEach(a => { const v = el.getAttribute?.(a); if (v) { const t = trMS(v); if (t !== v) el.setAttribute(a, t); } });
+    const doText = n => {
+      if (skip(n)) return;
+      const t = trMS(n.data);
+      if (t !== n.data) { if (I18N_CHECK) made.add(t.trim()); n.data = t; }
+      else miss(n.data, n.parentElement?.closest('[id]')?.id || n.parentElement?.tagName);
+    };
+    const doEl = el => ATTRS.forEach(a => {
+      const v = el.getAttribute?.(a); if (!v) return;
+      const t = trMS(v);
+      if (t !== v) { if (I18N_CHECK) made.add(t.trim()); el.setAttribute(a, t); } else miss(v, a + ' of #' + (el.id || el.tagName));
+    });
     const walk = root => {
       if (root.nodeType === 3) return doText(root);
       if (root.nodeType !== 1) return;
@@ -47,7 +65,7 @@
       else if (m.type === 'attributes') doEl(m.target);
       else m.addedNodes.forEach(walk);
     })).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS });
-    const ask = window.confirm.bind(window); window.confirm = m => ask(T(m));
+    const ask = window.confirm.bind(window); window.confirm = m => { const t = T(m); if (t === m) miss(m, 'confirm'); return ask(t); };
   }
   // BUDI95 (Malaysia): RON95 at RM1.99/L up to a monthly quota per person (300 L since 1 Sep 2026; e-hailing 800 L).
   settings.budi = Object.assign({ on: true, quota: 300, price: 1.99, market: 3.87 }, settings.budi || {});
@@ -222,8 +240,8 @@
 
   // ---- BUDI95 ----
   const budiPrice = () => +settings.budi.price || 1.99;
-  const isBudi = x => x.budi ?? (x.type === 'RON95' && Math.abs(x.price - budiPrice()) < 0.006);
-  const budiUsed = (monthKey, exceptId) => entries.filter(x => x.id !== exceptId && x.date.startsWith(monthKey) && isBudi(x)).reduce((a, x) => a + x.litres, 0);
+  const isBudi = x => FC.isBudiEntry(x, budiPrice());
+  const budiUsed = (monthKey, exceptId) => FC.budiUsedIn(entries, monthKey, budiPrice(), exceptId);
   const budiLeft = (monthKey, exceptId) => Math.max(0, (+settings.budi.quota || 0) - budiUsed(monthKey, exceptId));
   function updateBudiRow() {
     const show = settings.budi.on && F('type').value === 'RON95';
@@ -313,15 +331,11 @@
       const sub = [...new Set([brand ? name : '', street, area, town].filter(Boolean).map(x => x.trim()))]
         .filter((x, i, a) => !a.slice(0, i).some(y => y.toLowerCase() === x.toLowerCase())).join(', ');
       const short = [brand, name || street || area || town].filter(Boolean).join(' ');
-      return { lat, lon, title, sub, short, hay: [brand, name, street, area, town].join(' ').toLowerCase() };
+      return { lat, lon, title, sub, short, area: (area || '').trim(), town: (town || '').trim(), hay: [brand, name, street, area, town].join(' ').toLowerCase() };
     });
     return stations;
   }).catch(e => { stationsP = null; throw e; });
-  const distKm = (a, b) => {
-    const r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
-    const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;
-    return 12742 * Math.asin(Math.sqrt(x));
-  };
+  const distKm = FC.distKm;
   const fmtKm = d => d < 1 ? Math.round(d * 1000 / 10) * 10 + ' m' : num(d, d < 10 ? 1 : 0) + ' km';
   const getHere = (maxAge = 120000) => new Promise((ok, no) => {
     if (!navigator.geolocation) return no(new Error('no geolocation'));
@@ -527,65 +541,7 @@
     if (found.length) F('odo').focus({ preventScroll: true });
   }
 
-  function parseReceipt(raw) {
-    const text = raw.toUpperCase().replace(/[|]/g, ' ').replace(/(\d)\s*[,]\s*(\d{2})(?!\d)/g, '$1.$2');
-    const lines = text.split(/\n+/).map(s => s.trim()).filter(Boolean);
-    const nums = s => (s.match(/\d+(?:\.\d+)?/g) || []).map(Number);
-    const out = {};
-
-    // fuel type
-    if (/RON\s*97|PRIMAX\s*97|V-?POWER\s*97/.test(text)) out.type = 'RON97';
-    else if (/RON\s*100|V-?POWER\s*RACING|BLAZE\s*100/.test(text)) out.type = 'RON100';
-    else if (/DIESEL|DYNAMIC\s*DIESEL|EURO\s*5|B10|B7/.test(text)) out.type = 'Diesel';
-    else if (/RON\s*95|PRIMAX\s*95|FUELSAVE|PETROL|GASOLINE|ULP/.test(text)) out.type = 'RON95';
-
-    if (/BUDI|SUBSIDI/.test(text)) out.budi = true;
-
-    // litres: "24.390 L", "24.39LTR", "LITRE 24.39", "VOLUME: 24.39", "QTY 24.390"
-    let m = text.match(/(\d{1,3}\.\d{2,3})\s*(?:L\b|LT\b|LTR|LITRE|LITER|LTRS)/);
-    if (m) out.litres = +m[1];
-    if (!out.litres) for (const ln of lines) if (/LITRE|LITER|LTR|VOLUME|QTY|QUANTITY|VOL\b/.test(ln)) {
-      const n = nums(ln).filter(x => x > 0.5 && x < 200 && String(x).includes('.')); if (n.length) { out.litres = n[0]; break; }
-    }
-
-    // price per litre: "@ 2.050", "RM2.05/L", "PRICE/L 2.05", "UNIT PRICE 2.05"
-    m = text.match(/@\s*(?:RM)?\s*(\d\.\d{2,3})/) || text.match(/(?:RM)?\s*(\d\.\d{2,3})\s*\/\s*(?:L|LTR|LITRE)/)
-      || text.match(/(?:PRICE|UNIT|RATE|HARGA)[^\n\d]{0,15}(\d\.\d{2,3})/);
-    if (m) out.price = +m[1];
-
-    // total: lines with TOTAL / JUMLAH / AMOUNT etc. (prefer the last "TOTAL" not "SUBTOTAL")
-    const totalRe = /(GRAND\s*TOTAL|NETT?\s*TOTAL|TOTAL\s*(?:AMOUNT|SALE|RM)?|JUMLAH|AMOUNT\s*DUE|AMOUNT|AMT|NETT|PAID|BAYARAN)/;
-    let cands = [];
-    lines.forEach((ln, i) => {
-      if (totalRe.test(ln) && !/SUB\s*TOTAL|TAX|GST|SST|CHANGE|BAKI|ROUNDING/.test(ln)) {
-        const money = s => (s.match(/\d+\.\d{2}(?!\d)/g) || []).map(Number).filter(x => x >= 1 && x < 2000);
-        let n = money(ln);
-        if (!n.length && lines[i + 1]) n = money(lines[i + 1]);
-        if (n.length) cands.push(n.at(-1));
-      }
-    });
-    if (cands.length) out.total = Math.max(...cands);
-    if (!out.total) {
-      const rms = [...text.matchAll(/RM\s*(\d{1,4}\.\d{2})/g)].map(x => +x[1]).filter(x => x >= 1 && x < 2000);
-      if (rms.length) out.total = Math.max(...rms);
-    }
-
-    // sanity: price must be plausible
-    if (out.price && (out.price < 0.5 || out.price > 10)) delete out.price;
-    if (out.total && out.litres && !out.price) { const p = out.total / out.litres; if (p > 0.5 && p < 10) out.price = p; }
-    if (out.total && out.price && out.litres && Math.abs(out.litres * out.price - out.total) > Math.max(1, out.total * 0.05)) {
-      // inconsistent — trust total & price, recompute litres
-      out.litres = out.total / out.price;
-    }
-
-    // date: dd/mm/yyyy, dd-mm-yy, yyyy-mm-dd
-    m = text.match(/\b(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})\b/);
-    let d = m ? [+m[1], +m[2], +m[3]] : null;
-    if (!d) { m = text.match(/\b(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})\b/); if (m) d = [+m[3] < 100 ? 2000 + +m[3] : +m[3], +m[2], +m[1]]; }
-    if (d && d[1] >= 1 && d[1] <= 12 && d[2] >= 1 && d[2] <= 31 && d[0] > 2000 && d[0] <= new Date().getFullYear() + 1)
-      out.date = `${d[0]}-${String(d[1]).padStart(2, '0')}-${String(d[2]).padStart(2, '0')}`;
-    return out;
-  }
+  const parseReceipt = raw => FC.parseReceipt(raw);
 
   function loadImage(file) {
     return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
@@ -597,35 +553,11 @@
     return c.toDataURL('image/jpeg', q);
   }
 
-  /* ---------- calculations ---------- */
-  // For each fill-up, work out km driven and fuel used since the previous one.
-  // Gauge method: tank capacity known → fuel used = (prev.after − cur.before) × tank.
-  // Full-to-full: when cur is a full fill, fuel used = litres added since the last full fill.
-  // "Missed the one before" breaks the chain: no figure for it, counting restarts there.
-  function legs() {
-    const s = sorted(), tank = +veh().tank || 0, out = [];
-    let lastFull = null, litresSinceFull = 0;
-    s.forEach((cur, i) => {
-      const prev = s[i - 1];
-      litresSinceFull += cur.litres;
-      if (cur.missed) { lastFull = cur.full ? { odo: cur.odo, litresAtFull: litresSinceFull } : null; return; }
-      let leg = null;
-      if (prev && tank && prev.after != null && cur.before != null && prev.after > cur.before) {
-        const used = (prev.after - cur.before) / 100 * tank, km = cur.odo - prev.odo;
-        if (km > 0 && used > 0) leg = { id: cur.id, date: cur.date, km, litres: used };
-      }
-      if (!leg && cur.full && lastFull) {
-        const km = cur.odo - lastFull.odo, used = litresSinceFull - lastFull.litresAtFull;
-        if (km > 0 && used > 0) leg = { id: cur.id, date: cur.date, km, litres: used };
-      }
-      if (leg) { leg.kmpl = leg.km / leg.litres; out.push(leg); }
-      if (cur.full) lastFull = { odo: cur.odo, litresAtFull: litresSinceFull };
-    });
-    return out;
-  }
+  /* ---------- calculations (the maths is in js/core.js) ---------- */
+  function legs() { return FC.computeLegs(sorted(), +veh().tank || 0); }
   const effText = kmpl => !kmpl ? '–' : settings.unit === 'l100' ? num(100 / kmpl, 1) + ' L/100km' : num(kmpl, 1) + ' km/L';
   const effParts = kmpl => !kmpl ? ['–', ''] : settings.unit === 'l100' ? [num(100 / kmpl, 1), 'L/100km'] : [num(kmpl, 1), 'km/L'];
-  const avgOf = L => { const l = L.reduce((a, x) => a + x.litres, 0); return l ? L.reduce((a, x) => a + x.km, 0) / l : null; };
+  const avgOf = FC.avgOf;
 
   function inPeriod(date, p) {
     const d = new Date(date + 'T00:00'), now = new Date();
@@ -671,7 +603,7 @@
       `<div>${nf?.checked ? `Checked dashboard ${daysAgo(nf.checked)}` : `Filled ${daysAgo(last.date)} · ${num(last.odo, 0)} km`}` +
       ' · <button class="link upd" id="rangeUpd" aria-label="Update the range from your dashboard">Update</button></div></div>';
 
-    renderNudge(s, nf); renderDue(); renderInsights(s, L);
+    renderNudge(s, nf); renderDue(); renderInsights(s, L); renderYirCard(s);
 
     // BUDI95 quota: per person, so counted across every vehicle. Warn before the pump when about one fill is left.
     const quotaNote = (left, saved) => {
@@ -797,14 +729,7 @@
     const prev = s.filter(x => x.date < inP[0].date).at(-1);
     return inP.at(-1).odo - (prev ?? inP[0]).odo;
   };
-  // usual km per day over the last ~4 months of fill-ups
-  function paceOf(s) {
-    if (s.length < 2) return null;
-    const last = s.at(-1), recent = s.filter(x => (new Date(last.date) - new Date(x.date)) / 864e5 <= 120);
-    const pool = recent.length >= 2 ? recent : s.slice(-2);
-    const v = (last.odo - pool[0].odo) / Math.max(1, (new Date(last.date) - new Date(pool[0].date)) / 864e5);
-    return v > 0 ? v : null;
-  }
+  const paceOf = FC.paceOf; // usual km per day over the last ~4 months of fill-ups
   // best guess of the odometer today: newest reading (fill-up, dashboard check or cost) plus usual km/day since
   function odoNow() {
     const s = sorted(), pts = s.map(x => [x.date, x.odo]), chk = veh().check;
@@ -905,9 +830,7 @@
   const shortDate = d => new Date(d + 'T00:00').toLocaleDateString(LOC, { day: 'numeric', month: 'short', ...(d.slice(0, 4) !== today().slice(0, 4) ? { year: 'numeric' } : {}) });
   function remStatus(r) {
     const now = odoNow(), pace = paceOf(sorted());
-    let kmLeft = null, daysLeft = null, dueDate = null;
-    if (+r.km && r.lastKm != null && r.lastKm !== '' && now != null) kmLeft = +r.lastKm + +r.km - now;
-    if (+r.months && r.lastDate) { const d = new Date(r.lastDate + 'T00:00'); d.setMonth(d.getMonth() + +r.months); dueDate = localISO(d); daysLeft = -daysSince(dueDate); }
+    const { kmLeft, daysLeft, dueDate } = FC.remDue(r, now, today());
     const kmDays = kmLeft != null && pace ? kmLeft / pace : null;
     const overdue = (kmLeft != null && kmLeft < 0) || (daysLeft != null && daysLeft < 0);
     const soon = overdue || (kmLeft != null && kmLeft <= 1000) || (daysLeft != null && daysLeft <= 30);
@@ -1085,6 +1008,186 @@
     if (res === 'downloaded') toast('Report saved as an image');
   };
 
+
+  /* ---------- trip cost: how much a drive will cost and whether you'll need to stop for fuel ----------
+     Towns come from the station list (the middle of each town's stations), so it works offline too. */
+  let places = null;
+  const loadPlaces = () => loadStations().then(() => places ||= (() => {
+    const g = new Map();
+    const add = (key, name, sub, st) => { const p = g.get(key) || { name, sub, lat: 0, lon: 0, n: 0 }; p.lat += st.lat; p.lon += st.lon; p.n++; g.set(key, p); };
+    stations.forEach(st => {
+      if (st.town) add('t|' + st.town.toLowerCase(), st.town, '', st);
+      if (st.area) add('a|' + st.area.toLowerCase() + '|' + (st.town || '').toLowerCase(), st.area, st.town, st);
+    });
+    return [...g.values()].map(p => ({ ...p, lat: p.lat / p.n, lon: p.lon / p.n, hay: (p.name + ' ' + p.sub).toLowerCase(), town: !p.sub }));
+  })());
+  const trip = { from: null, to: null };
+  const tripDlg = $('#tripDlg');
+  const placeRow = (p, i) => '<button type="button" role="option" data-i="' + i + '"><b>' + esc(p.name) + '</b><small>' + esc(p.sub || L2('Town', 'Bandar')) + '</small></button>';
+  let placeHits = [];
+  async function searchPlaces(which) {
+    const q = $('#t-' + which).value.trim().toLowerCase(), box = $('#t-' + which + 'Sug');
+    trip[which] = null; tripCalc();
+    if (q.length < 2) { box.innerHTML = ''; return; }
+    try { await loadPlaces(); } catch { box.innerHTML = ''; return; }
+    if ($('#t-' + which).value.trim().toLowerCase() !== q) return;
+    const words = q.split(/\s+/);
+    placeHits = places.filter(p => words.every(w => p.hay.includes(w)))
+      .sort((a, b) => (b.name.toLowerCase().startsWith(words[0]) - a.name.toLowerCase().startsWith(words[0])) || (b.town - a.town) || b.n - a.n).slice(0, 6);
+    box.innerHTML = placeHits.length ? placeHits.map(placeRow).join('') : '<div class="msg">' + L2('No town by that name. You can type the distance instead.', 'Tiada bandar dengan nama itu. Anda boleh taip jaraknya.') + '</div>';
+    box.dataset.for = which;
+  }
+  let placeT = null;
+  ['from', 'to'].forEach(which => {
+    $('#t-' + which).addEventListener('input', () => { clearTimeout(placeT); placeT = setTimeout(() => searchPlaces(which), 120); });
+    $('#t-' + which + 'Sug').addEventListener('click', e => {
+      const b = e.target.closest('button[data-i]'); if (!b) return;
+      const p = placeHits[+b.dataset.i]; if (!p) return;
+      trip[which] = p; $('#t-' + which).value = p.sub ? p.name + ', ' + p.sub : p.name; $('#t-' + which + 'Sug').innerHTML = '';
+      setTripKm();
+      if (which === 'from' && !trip.to) $('#t-to').focus();
+    });
+  });
+  $('#t-here').onclick = async () => {
+    const b = $('#t-here'); b.disabled = true;
+    try {
+      const h = await getHere(), list = await loadPlaces().then(() => places.filter(p => p.town));
+      const town = list.reduce((a, p) => distKm(h, p) < distKm(h, a) ? p : a);
+      trip.from = { name: L2('Where I am', 'Lokasi saya'), sub: town.name, lat: h.lat, lon: h.lon };
+      $('#t-from').value = L2('Where I am', 'Lokasi saya') + ' (' + town.name + ')'; $('#t-fromSug').innerHTML = '';
+      setTripKm(); if (!trip.to) $('#t-to').focus();
+    } catch { toast(L2("Couldn't get your location. Type a town instead.", 'Lokasi tidak dapat dikesan. Taip nama bandar.')); }
+    b.disabled = false;
+  };
+  function setTripKm() {
+    if (!trip.from || !trip.to) return;
+    $('#t-km').value = Math.max(1, FC.roadKm(trip.from, trip.to)); $('#t-kmHint').hidden = false; tripCalc();
+  }
+  const l100 = () => settings.unit === 'l100';
+  function openTrip() {
+    const L = legs(), avg = avgOf(L.slice(-5)) || avgOf(L);
+    $('#t-effLbl').textContent = l100() ? 'Your L/100 km' : 'Your km/L';
+    $('#t-eff').value = avg ? (l100() ? (100 / avg).toFixed(1) : avg.toFixed(1)) : '';
+    $('#t-eff').placeholder = l100() ? 'e.g. 7.5' : 'e.g. 13';
+    tripDlg.showModal(); tripCalc();
+    if (!$('#t-from').value && !$('#t-km').value) $('#t-from').focus();
+  }
+  $('#tripLink').onclick = openTrip;
+  $('#t-km').addEventListener('input', () => { $('#t-kmHint').hidden = true; tripCalc(); });
+  ['#t-eff', '#t-people', '#t-return'].forEach(id => $(id).addEventListener('input', tripCalc));
+  $('#tripForm').onsubmit = e => e.preventDefault();
+  function tripCalc() {
+    const out = $('#tripRes'), km = +$('#t-km').value, effIn = +$('#t-eff').value;
+    const kmpl = effIn > 0 ? (l100() ? 100 / effIn : effIn) : null;
+    if (!(km > 0)) { out.innerHTML = ''; return; }
+    if (!kmpl) { out.innerHTML = '<div class="s">' + L2("Enter your car's km/L. It fills in by itself after two full-tank fill-ups.", 'Masukkan km/L kereta anda. Ia diisi sendiri selepas dua kali isi penuh.') + '</div>'; return; }
+    const v = veh(), type = v.lastType || 'RON95', market = +settings.budi.market || 3.87;
+    const price = officialPrice(type) || lastPriceOf(type) || (type === 'RON95' ? market : null) || 3.87;
+    const budi = type === 'RON95' && settings.budi.on, left = budi ? budiLeft(today().slice(0, 7)) : 0;
+    const s = sorted(), nf = s.length ? nextFill(s, legs()) : null;
+    const r = FC.tripCost({ km, roundTrip: $('#t-return').checked, kmpl, price: type === 'RON95' ? market : price,
+      budiPrice: budi ? budiPrice() : 0, budiLeftL: left, tankL: +v.tank || 0, leftKm: nf?.left ?? null, people: Math.max(1, Math.round(+$('#t-people').value || 1)) });
+    const lines = [];
+    lines.push(['⛽', esc(type) + ' · ' + (r.budiL > 0
+      ? (r.budiL >= r.litres - 0.05 ? L2('all at the BUDI95 price', 'semua pada harga BUDI95') + ' (' + rm(budiPrice()) + '/L)'
+        : L2(num(r.budiL, 1) + ' L at ' + rm(budiPrice()) + ' (BUDI95 quota left), the rest at ' + rm(market), num(r.budiL, 1) + ' L pada ' + rm(budiPrice()) + ' (baki kuota BUDI95), selebihnya ' + rm(market)))
+      : rm(type === 'RON95' ? market : price) + '/L')]);
+    if (r.perPerson) lines.push(['👥', L2('<b>' + rm(r.perPerson) + '</b> each', '<b>' + rm(r.perPerson) + '</b> seorang')]);
+    if (r.stops === 0) lines.push(['✅', L2('No fuel stop needed. About <b>' + num(r.leftAtEnd, 0) + ' km</b> left when you get there' + ($('#t-return').checked ? ' and back' : '') + '.',
+      'Tak perlu berhenti isi minyak. Lebih kurang <b>' + num(r.leftAtEnd, 0) + ' km</b> lagi bila sampai' + ($('#t-return').checked ? ' dan balik' : '') + '.')]);
+    else if (r.stops > 0) lines.push(['⚠️', '<span class="warn">' + (nf?.left != null
+      ? L2('Refuel ' + (r.stops === 1 ? 'once' : r.stops + ' times') + ' on the way: the first time within about <b>' + num(r.firstStopKm, 0) + ' km</b>.',
+        'Isi minyak ' + (r.stops === 1 ? 'sekali' : r.stops + ' kali') + ' dalam perjalanan: kali pertama dalam lebih kurang <b>' + num(r.firstStopKm, 0) + ' km</b>.')
+      : L2('Needs about ' + r.stops + ' fill' + (r.stops === 1 ? '' : 's') + ' of a full tank on the way.', 'Perlu lebih kurang ' + r.stops + ' kali isi penuh dalam perjalanan.')) + '</span>']);
+    else lines.push(['ℹ️', '<span class="s">' + L2('Set your tank size in Settings to see if you need to stop for fuel.', 'Tetapkan saiz tangki dalam Tetapan untuk tahu sama ada perlu berhenti isi minyak.') + '</span>']);
+    out.innerHTML = '<div><div class="big">' + rm(r.rm) + '</div><div class="s">' + L2('≈ ' + num(r.litres, 1) + ' L for ' + num(r.dist, 0) + ' km at ' + effText(kmpl), '≈ ' + num(r.litres, 1) + ' L untuk ' + num(r.dist, 0) + ' km pada ' + effText(kmpl)) + '</div></div>'
+      + lines.map(([ic, t]) => '<div class="ln"><span>' + ic + '</span><span>' + t + '</span></div>').join('');
+  }
+
+  /* ---------- year in review: a shareable picture of your year ---------- */
+  const yirDlg = $('#yirDlg');
+  let yirYear = null, yirBlob = null, yirUrl = null;
+  const yirOf = year => FC.yearSummary({ s: sorted(), L: legs(), costs: myCosts(), year, isBudi, budiPrice: budiPrice(), market: +settings.budi.market || 0 });
+  // Dec: this year so far; Jan: the year that just ended
+  const yirSeason = () => { const d = new Date(), m = d.getMonth(); return m === 11 ? d.getFullYear() : m === 0 ? d.getFullYear() - 1 : null; };
+  function renderYirCard(s) {
+    const el = $('#yirCard'), y = yirSeason(), key = veh().id + ':' + y;
+    const sum = y && !(settings.yirSeen || []).includes(key) ? yirOf(y) : null;
+    el.hidden = !(sum && sum.fills >= 5);
+    if (el.hidden) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div style="font-size:28px">🎉</div><div class="t"><b>' + L2('Your ' + y + ' in Fuel Log', y + ' anda dalam Fuel Log') + '</b>'
+      + L2(sum.fills + ' fill-ups, ' + rm(sum.spent) + ' on fuel. See your year in one picture.', sum.fills + ' isian, ' + rm(sum.spent) + ' untuk minyak. Lihat tahun anda dalam satu gambar.')
+      + '</div><button class="primary" id="yirSee">' + L2('See it', 'Lihat') + '</button><button class="x" id="yirHide" aria-label="Hide">×</button>';
+    $('#yirSee').onclick = () => openYir(y);
+    $('#yirHide').onclick = () => { settings.yirSeen = [...(settings.yirSeen || []), key].slice(-20); saveSettings(); el.hidden = true; };
+  }
+  function openYir(year) {
+    const years = FC.yearsWithData(sorted());
+    if (!years.length) { toast('Log a few fill-ups first'); return; }
+    yirYear = years.includes(year) ? year : years[0];
+    $('#yirYears').innerHTML = years.slice(0, 6).map(y => '<button data-y="' + y + '" aria-pressed="' + (y === yirYear) + '">' + y + '</button>').join('');
+    yirDlg.showModal(); drawYir();
+  }
+  $('#yirOpen').onclick = () => openYir(yirSeason() ?? new Date().getFullYear());
+  $('#yirYears').onclick = e => { const b = e.target.closest('[data-y]'); if (!b) return; yirYear = +b.dataset.y;
+    $$('#yirYears button').forEach(x => x.setAttribute('aria-pressed', x === b)); drawYir(); };
+  yirDlg.addEventListener('close', () => { if (yirUrl) URL.revokeObjectURL(yirUrl); yirUrl = null; $('#yirImg').removeAttribute('src'); });
+  async function drawYir() {
+    const d = yirOf(yirYear); if (!d) return;
+    const W = 1080, P = 80, MON = Array.from({ length: 12 }, (_, i) => new Date(2026, i, 1).toLocaleDateString(LOC, { month: 'short' }));
+    const tiles = [];
+    tiles.push([L2('Fill-ups', 'Isian'), String(d.fills), num(d.litres, 0) + ' L']);
+    if (d.km > 0) tiles.push([L2('Distance', 'Jarak'), num(d.km, 0) + ' km', d.costPerKm ? 'RM ' + num(d.costPerKm, 2) + L2(' per km', ' sekm') + (d.costsTotal ? L2(' all-in', ' termasuk semua') : '') : '']);
+    if (d.avg) tiles.push([L2('Consumption', 'Penggunaan'), effText(d.avg), d.best ? L2('best ', 'terbaik ') + effText(d.best.kmpl) : '']);
+    if (d.top) tiles.push([L2('Favourite station', 'Stesen kegemaran'), d.top.name, L2(d.top.n + ' visit' + (d.top.n === 1 ? '' : 's'), d.top.n + ' kali')]);
+    if (d.saved >= 1) tiles.push([L2('BUDI95 saved', 'Jimat BUDI95'), '≈ ' + rm(d.saved), num(d.budiL, 0) + ' L']);
+    if (d.costsTotal) tiles.push([L2('Car costs', 'Kos kereta'), rm(d.costsTotal), L2('service, tyres, tolls…', 'servis, tayar, tol…')]);
+    if (d.minPrice != null && d.maxPrice > d.minPrice + 0.005) tiles.push([L2('Price paid', 'Harga dibayar'), 'RM ' + num(d.minPrice, 2) + '–' + num(d.maxPrice, 2), L2('per litre', 'seliter')]);
+    if (d.vsLastYear != null) tiles.push([L2('vs ' + (d.year - 1), 'berbanding ' + (d.year - 1)), (d.vsLastYear > 0 ? '▲ ' : '▼ ') + Math.abs(Math.round(d.vsLastYear * 100)) + '%', L2('on fuel', 'untuk minyak')]);
+    const rows = Math.ceil(tiles.length / 2), TH = 170, H = 520 + rows * (TH + 24) + 330 + 110;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+    if (LANG === 'ms') { const ft = g.fillText.bind(g); g.fillText = (t, x, y, m) => ft(T(t), x, y, m); }
+    const font = (w, sz) => g.font = w + ' ' + sz + 'px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+    const fit = (t, max) => { let s = String(t); while (s.length > 3 && g.measureText(s).width > max) s = s.slice(0, -2); return s === String(t) ? s : s.trimEnd() + '…'; };
+    const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#0b3d39'); bg.addColorStop(1, '#0f766e');
+    g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(255,255,255,.06)'; g.beginPath(); g.arc(W - 90, 120, 260, 0, Math.PI * 2); g.fill();
+    let y = P + 40;
+    g.fillStyle = '#99f6e4'; font(700, 34); g.fillText(L2('YEAR IN REVIEW · ', 'TAHUN ANDA · ') + d.year, P, y);
+    y += 74; g.fillStyle = '#fff'; font(800, 64); g.fillText(fit(veh().name, W - 2 * P), P, y);
+    y += 150; font(850, 132); g.fillText(rm(d.spent), P, y);
+    y += 56; g.fillStyle = '#ccfbf1'; font(500, 36); g.fillText(L2('spent on fuel', 'dibelanjakan untuk minyak'), P, y);
+    y += 60;
+    const tw = (W - 2 * P - 24) / 2;
+    tiles.forEach(([k, v, sub], i) => {
+      const x = P + (i % 2) * (tw + 24), ty = y + Math.floor(i / 2) * (TH + 24);
+      g.fillStyle = 'rgba(255,255,255,.1)'; g.beginPath(); g.roundRect(x, ty, tw, TH, 26); g.fill();
+      g.fillStyle = '#99f6e4'; font(600, 28); g.fillText(fit(k, tw - 56), x + 28, ty + 50);
+      g.fillStyle = '#fff'; font(750, 46); g.fillText(fit(v, tw - 56), x + 28, ty + 106);
+      if (sub) { g.fillStyle = '#ccfbf1'; font(500, 26); g.fillText(fit(sub, tw - 56), x + 28, ty + 146); }
+    });
+    y += rows * (TH + 24) + 50;
+    g.fillStyle = '#99f6e4'; font(600, 30); g.fillText(L2('Fuel per month', 'Minyak setiap bulan'), P, y);
+    const max = Math.max(...d.months, 1), top = y + 30, base = top + 200, bw = (W - 2 * P) / 12;
+    d.months.forEach((v, i) => {
+      const h = Math.max(v > 0 ? 6 : 2, v / max * 190), x = P + i * bw + bw * 0.16, w = bw * 0.68;
+      g.fillStyle = i === d.busiest && v > 0 ? '#fbbf24' : 'rgba(255,255,255,.55)'; g.beginPath(); g.roundRect(x, base - h, w, h, 8); g.fill();
+      g.fillStyle = '#ccfbf1'; font(500, 22); g.textAlign = 'center'; g.fillText(MON[i], x + w / 2, base + 34); g.textAlign = 'left';
+    });
+    if (d.months[d.busiest] > 0) { g.fillStyle = '#fde68a'; font(600, 28); g.textAlign = 'right';
+      g.fillText(L2('Most: ', 'Paling banyak: ') + MON[d.busiest] + ' · ' + rm(d.months[d.busiest]), W - P, y); g.textAlign = 'left'; }
+    g.fillStyle = 'rgba(255,255,255,.7)'; font(500, 26); g.fillText(L2('Made with Fuel Log', 'Dibuat dengan Fuel Log'), P, H - P + 10);
+    yirBlob = await new Promise(r => cv.toBlob(r, 'image/png'));
+    if (yirUrl) URL.revokeObjectURL(yirUrl);
+    yirUrl = URL.createObjectURL(yirBlob); $('#yirImg').src = yirUrl;
+  }
+  $('#yirShare').onclick = async () => {
+    if (!yirBlob) return;
+    const name = ('fuel-log-' + yirYear + '-' + veh().name.replace(/[^\w-]+/g, '-') + '.png').toLowerCase();
+    const res = await shareFile(new File([yirBlob], name, { type: 'image/png' }), L2('My ' + yirYear + ' in Fuel Log', yirYear + ' saya dalam Fuel Log'));
+    if (res === 'downloaded') toast('Image saved');
+  };
+
   // One reminder at a time above the summary: a fill-up you may have forgotten to log, else a backup that's due.
   const daysSince = d => Math.round((new Date(today() + 'T00:00') - new Date(d + 'T00:00')) / 864e5);
   function renderNudge(s, nf) {
@@ -1118,14 +1221,7 @@
     if (!s.length) return null;
     const last = s.at(-1), tank = +veh().tank || 0, avg = avgOf(L.slice(-5));
     const daysFrom = d => Math.max(0, Math.round((new Date(today() + 'T00:00') - new Date(d + 'T00:00')) / 864e5));
-    let kmPerDay = null;
-    if (s.length >= 2) {
-      const recent = s.filter(x => (new Date(last.date) - new Date(x.date)) / 864e5 <= 120);
-      const pool = recent.length >= 2 ? recent : s.slice(-2);
-      const span = Math.max(1, (new Date(last.date) - new Date(pool[0].date)) / 864e5);
-      kmPerDay = (last.odo - pool[0].odo) / span;
-      if (!(kmPerDay > 0)) kmPerDay = null;
-    }
+    const kmPerDay = paceOf(s);
     const chk = veh().check?.fillId === last.id ? veh().check : null;
     let kmSince = null;
     if (chk?.odo > last.odo) kmSince = chk.odo - last.odo + (kmPerDay || 0) * daysFrom(chk.date);
@@ -1399,8 +1495,7 @@
     toast('Backup saved'); return true;
   }
   $('#expJson').onclick = () => backup().then(ok => ok && view === 'home' && renderHome());
-  // Text cells are quoted, and a leading = + - @ gets a ' so Excel/Sheets show it as text instead of running it as a formula.
-  const csvText = t => { const s = String(t ?? ''); return '"' + (/^[=+\-@\t\r]/.test(s) ? "'" + s : s).replace(/"/g, '""') + '"'; };
+  const csvText = FC.csvText; // quotes text, and stops spreadsheets running it as a formula
   $('#expCsv').onclick = () => {
     const vname = id => settings.vehicles.find(v => v.id === id)?.name || '';
     const all = [...entries].sort((a, b) => vname(a.vehicleId).localeCompare(vname(b.vehicleId)) || a.date.localeCompare(b.date) || a.odo - b.odo);
@@ -1416,66 +1511,30 @@
       download(`car-costs-${today()}.csv`, cr.map(r => r.join(',')).join('\n'), 'text/csv');
     }, 600);
   };
-  /* A backup file can come from anyone (e.g. sent on WhatsApp), so nothing in it is trusted:
-     each record is rebuilt from the fields the app knows, with the right types, and anything else is dropped. */
-  const okId = v => typeof v === 'string' && /^[\w-]{1,64}$/.test(v) ? v : null;
-  const okDate = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(new Date(v + 'T00:00')) ? v : null;
-  const okNum = v => { const n = typeof v === 'string' && v.trim() ? Number(v) : v; return typeof n === 'number' && isFinite(n) ? n : null; };
-  const okStr = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
-  const FUELS = ['RON95', 'RON97', 'RON100', 'Diesel', 'Other'];
-  function cleanEntry(x) {
-    const id = okId(x?.id), date = okDate(x?.date); if (!id || !date) return null;
-    const n = k => okNum(x[k]);
-    const e = { id, date, odo: n('odo') ?? 0, total: n('total') ?? 0, litres: n('litres') ?? 0, price: n('price') ?? 0,
-      type: FUELS.includes(x.type) ? x.type : 'Other', before: n('before'), after: n('after'), full: !!x.full, missed: !!x.missed,
-      station: okStr(x.station, 120), hasReceipt: false, vehicleId: okId(x.vehicleId), rangeBefore: n('rangeBefore'), rangeAfter: n('rangeAfter') };
-    if (typeof x.budi === 'boolean') e.budi = x.budi;
-    return e;
-  }
-  function cleanCost(c) {
-    const id = okId(c?.id), date = okDate(c?.date); if (!id || !date) return null;
-    return { id, vehicleId: okId(c.vehicleId), date, cat: Object.hasOwn(CATS, c.cat) ? c.cat : 'other', amount: okNum(c.amount) ?? 0,
-      odo: okNum(c.odo), note: okStr(c.note, 300), done: Array.isArray(c.done) ? c.done.map(okId).filter(Boolean) : [] };
-  }
-  function cleanRem(r) {
-    const id = okId(r?.id); if (!id) return null;
-    return { id, name: okStr(r.name, 60) || 'Reminder', km: okNum(r.km), months: okNum(r.months), lastDate: okDate(r.lastDate),
-      lastKm: okNum(r.lastKm), cat: Object.hasOwn(CATS, r.cat) ? r.cat : null };
-  }
-  function cleanVehicle(v) {
-    const id = okId(v?.id); if (!id) return null;
-    const s = k => okNum(v[k]) != null ? String(okNum(v[k])) : '';
-    const out = { id, name: okStr(v.name, 60) || 'Vehicle', tank: s('tank'), budget: s('budget'),
-      lastType: FUELS.includes(v.lastType) ? v.lastType : 'RON95', lastStation: okStr(v.lastStation, 120),
-      reminders: Array.isArray(v.reminders) ? v.reminders.map(cleanRem).filter(Boolean) : [] };
-    if (okNum(v.gaugeSteps) > 0 && okNum(v.gaugeSteps) <= 16) out.gaugeSteps = okNum(v.gaugeSteps);
-    if (okId(v.nudged)) out.nudged = v.nudged;
-    if (v.check && typeof v.check === 'object' && okDate(v.check.date))
-      out.check = { date: v.check.date, range: okNum(v.check.range), odo: okNum(v.check.odo), fillId: okId(v.check.fillId) };
-    return out;
-  }
+  // A backup file can come from anyone, so every record is rebuilt by js/core.js (clean*) before it's used.
+  const CAT_KEYS = Object.keys(CATS);
   $('#impJson').onchange = async e => {
     const f = e.target.files[0]; e.target.value = ''; if (!f) return;
     try {
       const d = JSON.parse(await f.text()); const list = Array.isArray(d) ? d : d.entries;
       if (!Array.isArray(list)) throw 0;
-      const ids = new Set(entries.map(x => x.id)); const add = list.map(cleanEntry).filter(x => x && !ids.has(x.id));
+      const ids = new Set(entries.map(x => x.id)); const add = list.map(FC.cleanEntry).filter(x => x && !ids.has(x.id));
       // receipt photos come along when the backup included them
       let photos = 0;
       for (const x of add) {
         const p = d.photos && Object.hasOwn(d.photos, x.id) ? d.photos[x.id] : null;
-        if (typeof p === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,[\w+/=]+$/.test(p)) { try { await idb.put(x.id, p); x.hasReceipt = true; photos++; continue; } catch {} }
+        if (FC.okPhoto(p)) { try { await idb.put(x.id, p); x.hasReceipt = true; photos++; continue; } catch {} }
         x.hasReceipt = false;
       }
       if (Array.isArray(d.settings?.vehicles)) { // bring in vehicles we don't have yet
         const have = new Set(settings.vehicles.map(v => v.id));
-        d.settings.vehicles.map(cleanVehicle).filter(v => v && !have.has(v.id)).forEach(v => settings.vehicles.push(v));
+        d.settings.vehicles.map(v => FC.cleanVehicle(v, CAT_KEYS)).filter(v => v && !have.has(v.id)).forEach(v => settings.vehicles.push(v));
         saveSettings();
       }
       entries = entries.concat(add); save(KEY, entries); adoptOrphans(); await tidyPhotos();
       if (Array.isArray(d.costs)) {
         const have = new Set(costs.map(c => c.id)), vs = new Set(settings.vehicles.map(v => v.id));
-        costs = costs.concat(d.costs.map(cleanCost).filter(c => c && !have.has(c.id)).map(c => vs.has(c.vehicleId) ? c : { ...c, vehicleId: settings.current }));
+        costs = costs.concat(d.costs.map(c => FC.cleanCost(c, CAT_KEYS)).filter(c => c && !have.has(c.id)).map(c => vs.has(c.vehicleId) ? c : { ...c, vehicleId: settings.current }));
         save(CKEY, costs);
       }
       renderSettings(); renderTitle();

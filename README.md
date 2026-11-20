@@ -34,6 +34,17 @@ No sign-up, no server, no ads. Everything stays on your phone.
 - **Share report**: turns the period you picked into an image (fuel, each type of car cost, distance, consumption, cost per km, BUDI95 saved, a per-month chart) to send on WhatsApp or keep.
 - One chart with tabs: **Spending** per month, **Price per litre** trend, **km/L** per fill-up.
 
+**Trip cost** (🧭 on Home)
+- Pick where you're going from and to (any town or area in Malaysia, or **📍 Where I am**), or just type the distance.
+- See what the drive costs with **your car's own km/L** and this week's pump price. For RON95 with BUDI95, the litres your remaining quota covers are counted at RM 1.99.
+- Tick **Return trip** for pergi balik, and set **People sharing** to split the cost.
+- It tells you whether you'll make it on what's in the tank, or how many times to refuel and when the first stop is due.
+- Distances between towns are estimated (straight line + 20%), so change the km if you know the road distance. It works offline: the towns come from the station list.
+
+**Year in review**
+- A picture of your year to share on WhatsApp: total spent on fuel, fill-ups, distance, consumption and your best tank, favourite station, BUDI95 saved, car costs, the range of prices you paid, a month-by-month chart, and how it compares with last year.
+- Appears on Home in December and January (hide it with ×), and any time from **Settings → Data → Year in review**, for any year you've logged.
+
 **Car costs and service reminders**
 - Log **service, tyres, repair, insurance, road tax, toll, parking, TNG reloads** and other costs from **+ Car cost** on Home or the **Car costs** tab in History.
 - **Service reminders** per vehicle (Settings): every so many km and/or months, whichever comes first. Quick picks for oil change, road tax, insurance, tyre rotation, battery and brake check. The current odometer is estimated from your fill-ups and how much you usually drive.
@@ -88,6 +99,29 @@ The **range and next fill-up** estimates use, in order of preference: the range 
 - **Importing a backup is safe even if someone else made the file:** only the fields the app knows are kept, numbers must be numbers, and only real photos are accepted. The page also has a security policy that only lets scripts load from the app itself and the receipt reader's CDN, and the receipt reader is checked against a known fingerprint before it runs. CSV exports put a `'` in front of text starting with `=`, `+`, `-` or `@`, so Excel and Sheets don't treat it as a formula.
 - The petrol station list is from [OpenStreetMap](https://www.openstreetmap.org/copyright) © OpenStreetMap contributors, available under the ODbL.
 
+## Tests
+
+```bash
+node --test
+```
+
+Needs Node.js 20 or newer and nothing else (no npm install). The tests cover:
+- the consumption maths (gauge and full-to-full);
+- the km per day and range estimates;
+- BUDI95 quota counting;
+- service reminder due dates;
+- reading receipts;
+- CSV export;
+- safe backup import;
+- trip cost and Year in review.
+
+They also run the translation check. GitHub runs the tests on every push (`.github/workflows/tests.yml`).
+
+**Translation check.** `node tools/check-i18n.mjs` lists any fixed text in `index.html` and `js/app.js` that has no Malay translation. Text built while the app runs (with numbers, names or dates in it) can only be checked live:
+1. Open the app with `?i18n=check` in Malay mode, e.g. http://localhost:8123/?i18n=check.
+2. Go through the screens.
+3. Run `fuelLogMissing()` in the browser console.
+
 ## Running it locally
 
 It's a static site with no build step.
@@ -103,11 +137,16 @@ Then open http://localhost:8123. Use a local server rather than opening `index.h
 ```
 index.html                 Layout: every screen and dialog
 css/app.css                Styles, including day and night colours
-js/app.js                  The app: logging, calculations, charts, reminders, backups
+js/app.js                  The app: screens, logging, charts, reminders, backups, trip cost, year in review
+js/core.js                 The calculations, with no screen code (so they can be tested)
 js/i18n.js                 Bahasa Melayu: exact phrases and patterns for text with numbers
 js/theme.js                Applies day/night before the page paints
 stations.json              Petrol stations in Malaysia (from OpenStreetMap)
-tools/build-stations.mjs   Rebuilds stations.json from an OpenStreetMap download
+tools/update-stations.mjs  Downloads the latest stations from OpenStreetMap and rebuilds stations.json
+tools/build-stations.mjs   Turns the OpenStreetMap download into stations.json
+tools/check-i18n.mjs       Lists text with no Malay translation
+tests/                     Tests (node --test)
+.github/workflows/         Tests on every push; station list update every month
 sw.js                      Service worker: offline support and caching
 manifest.webmanifest       App name, colours, icons and home-screen shortcuts
 icons/                     App icons
@@ -115,7 +154,7 @@ icons/                     App icons
 
 **Adding text:** write it in English in `index.html` or `js/app.js`, then add the same text with its Malay translation to `MS` in `js/i18n.js`. Anything missing just shows in English.
 
-**Updating the station list:** the steps are at the top of `tools/build-stations.mjs`.
+**Updating the station list:** this happens by itself. On the 1st of every month a GitHub Action runs `tools/update-stations.mjs` and commits `stations.json` if any stations were added, moved or closed. You can also run it from **GitHub → Actions → Update petrol stations → Run workflow**, or locally with `node tools/update-stations.mjs`. It won't overwrite the list if the download looks incomplete.
 
 ## Deploying
 

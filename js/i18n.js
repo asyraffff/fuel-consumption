@@ -2,7 +2,18 @@
 // MS: exact English text -> Malay. RULES: patterns for text that has numbers, dates or names in it, applied in order.
 // To translate something new, add the English text exactly as it appears on screen (trimmed) to MS.
 window.FUEL_LOG_MS = (() => {
+// Text that's the same in both languages (names, units, fuel grades), so the translation check doesn't flag it.
+const SAME = new Set(['Fuel Log', 'km/L', 'L/100 km', 'L/100km', 'RM', 'BUDI95', 'RON95', 'RON97', 'RON100', 'Diesel', 'Auto', 'Data',
+  'Bahasa Melayu', 'English', 'Isi minyak', 'Odometer', 'Odometer (km)', 'TNG', '© OpenStreetMap contributors', 'OpenStreetMap', 'data.gov.my']);
 const MS = {
+  'Spent this month': 'Belanja bulan ini',
+  '🧭 Trip cost': '🧭 Kos perjalanan', 'Trip cost': 'Kos perjalanan', 'From': 'Dari', 'To': 'Ke', '📍 Where I am': '📍 Lokasi saya',
+  'Town, e.g. Shah Alam': 'Bandar, cth. Shah Alam', 'Town, e.g. Ipoh': 'Bandar, cth. Ipoh', 'Towns': 'Bandar',
+  'Distance one way (km)': 'Jarak sehala (km)', 'Your km/L': 'km/L anda', 'Your L/100 km': 'L/100 km anda', 'e.g. 200': 'cth. 200', 'e.g. 13': 'cth. 13', 'e.g. 7.5': 'cth. 7.5',
+  'Estimated from the map: straight line + 20%. Change it if you know the road distance.': 'Anggaran dari peta: garis lurus + 20%. Tukar jika anda tahu jarak jalan raya.',
+  'Return trip': 'Pergi balik', 'People sharing': 'Dikongsi berapa orang',
+  '🎉 Year in review': '🎉 Ringkasan tahunan', 'Year in review': 'Ringkasan tahunan', 'Year in review image': 'Gambar ringkasan tahunan', 'Year': 'Tahun',
+  'Share image': 'Kongsi gambar', 'Image saved': 'Gambar disimpan', 'Log a few fill-ups first': 'Rekod beberapa isian dahulu', 'Hide': 'Sembunyi', 'Monthly budget used': 'Bajet bulanan digunakan',
   '(optional)': '(pilihan)', '+ Add': '+ Tambah', '+ Add car cost': '+ Tambah kos kereta', '+ Add vehicle': '+ Tambah kenderaan', '+ Car cost': '+ Kos kereta',
   '3 months': '3 bulan', 'Add car cost': 'Tambah kos kereta', 'Edit car cost': 'Ubah kos kereta', 'All': 'Semua', 'All-in per km': 'Kos penuh per km',
   'Also mark as done': 'Tandakan juga sebagai selesai', 'Amount (RM)': 'Jumlah (RM)', 'Avg consumption': 'Purata penggunaan',
@@ -130,7 +141,7 @@ const RULES = [
   [/^Fuel Log report · (.+)$/, 'Laporan Fuel Log · $1'], [/^Last 3 months · to (.+)$/, '3 bulan lepas · hingga $1'],
   [/^Made with Fuel Log · (.+)$/, 'Dibuat dengan Fuel Log · $1'],
   [/^Delete "(.+)"(?: and its (\d+) fill-ups?)?\? This cannot be undone\.$/, (m, a, n) => `Padam "${a}"${n ? ` dan ${n} isiannya` : ''}? Tindakan ini tidak boleh dibatalkan.`],
-  [/^Next /, 'Seterusnya '], [/^Filled /, 'Diisi '], [/^Checked dashboard /, 'Papan pemuka disemak '],
+  [/^(\d+) steps$/, '$1 bahagian'], [/^Next /, 'Seterusnya '], [/^Filled /, 'Diisi '], [/^Checked dashboard /, 'Papan pemuka disemak '],
   [/^· every ~(\d+) days$/, '· setiap ~$1 hari'], [/^· every /, '· setiap '],
   [/\bin ([\d,]+) km\b/, 'dalam $1 km'], [/([\d,]+) km overdue/, 'lewat $1 km'], [/\bwas due /, 'sepatutnya '], [/\bdue today\b/, 'perlu hari ini'],
   [/\bby (\d{1,2} \S+(?: \d{4})?)/, 'sebelum $1'], [/ or (\d)/g, ' atau $1'], [/\b(\d+) months?\b/g, '$1 bulan'],
@@ -138,5 +149,17 @@ const RULES = [
   [/\byesterday\b/g, 'semalam'], [/\btoday\b/g, 'hari ini'], [/\bToday\b/g, 'Hari ini'], [/after missed fill-up/g, 'selepas isian terlepas'],
   [/ all-in$/, ' termasuk semua'], [/^now ≈ /, 'sekarang ≈ '], [/^e\.g\. /, 'cth. '],
 ];
-  return { MS, RULES, tw };
+  // Translate one piece of on-screen text; returns it unchanged when there's no translation.
+  function trMS(str) {
+    const core = str.trim(); if (!core || !/[A-Za-z]/.test(core)) return str;
+    let out = MS[core];
+    if (out == null) {
+      const icon = core.match(/^([^A-Za-z\d(+]+ )(.+)$/u); // "🔧 Service"
+      if (icon && MS[icon[2]] != null) out = icon[1] + MS[icon[2]];
+      else if (/^[A-Za-z' ]+(, [A-Za-z' ]+)+$/.test(core) && core.split(', ').every(w => MS[w] != null)) out = core.split(', ').map(tw).join(', ');
+      else { out = core; for (const [re, to] of RULES) out = out.replace(re, to); }
+    }
+    return out === core ? str : str.replace(core, () => out);
+  }
+  return { MS, RULES, SAME, tw, trMS };
 })();
